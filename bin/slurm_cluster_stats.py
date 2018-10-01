@@ -13,15 +13,15 @@ mnthAgo = (now - DT.timedelta(days=28)).strftime("%Y-%m-%dT%H:%M:%S")
 weekAgo = (now - DT.timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%S")
 
 # This is the slow stuff... 
-cyfStart = os.popen("/home/samh/bin/dsmc_report_years_from.sh " + startDT).read().split('\n')[0]
-cyfYear  = os.popen("/home/samh/bin/dsmc_report_years_from.sh " + yearAgo).read().split('\n')[0]
-cyfMonth = os.popen("/home/samh/bin/dsmc_report_years_from.sh " + mnthAgo).read().split('\n')[0]
-cyfWeek  = os.popen("/home/samh/bin/dsmc_report_years_from.sh " + weekAgo).read().split('\n')[0]
+cyfStart = os.popen("/resource/apps/simple-web/bin/slurm_report_years_from.sh " + startDT).read().split('\n')[0]
+cyfYear  = os.popen("/resource/apps/simple-web/bin/slurm_report_years_from.sh " + yearAgo).read().split('\n')[0]
+cyfMonth = os.popen("/resource/apps/simple-web/bin/slurm_report_years_from.sh " + mnthAgo).read().split('\n')[0]
+cyfWeek  = os.popen("/resource/apps/simple-web/bin/slurm_report_years_from.sh " + weekAgo).read().split('\n')[0]
 
-cufStart = os.popen("/home/samh/bin/dsmc_report_usage_from.sh " + startDT).read().split('\n')[0]
-cufYear  = os.popen("/home/samh/bin/dsmc_report_usage_from.sh " + yearAgo).read().split('\n')[0]
-cufMonth = os.popen("/home/samh/bin/dsmc_report_usage_from.sh " + mnthAgo).read().split('\n')[0]
-cufWeek  = os.popen("/home/samh/bin/dsmc_report_usage_from.sh " + weekAgo).read().split('\n')[0]
+cufStart = os.popen("/resource/apps/simple-web/bin/slurm_report_usage_from.sh " + startDT).read().split('\n')[0]
+cufYear  = os.popen("/resource/apps/simple-web/bin/slurm_report_usage_from.sh " + yearAgo).read().split('\n')[0]
+cufMonth = os.popen("/resource/apps/simple-web/bin/slurm_report_usage_from.sh " + mnthAgo).read().split('\n')[0]
+cufWeek  = os.popen("/resource/apps/simple-web/bin/slurm_report_usage_from.sh " + weekAgo).read().split('\n')[0]
 
 # On to the fast stuff...
 
@@ -41,11 +41,11 @@ for line in os.popen("""sinfo -h -p funder --Node -o %n,%m,%C""").read().split('
 	(cpuAlloc, cpuIdle, cpuOther, cpuTotal) = cpuData.split('/')
 	dataStore.write("HOST=" + hostname + "," + str(int(memAvail) * 1024 * 1024) + "," + cpuAlloc + "," + cpuIdle + "," + cpuTotal + "\n")
 	
-for line in os.popen("/home/samh/bin/dsmc_report_usagepercent_from.sh " + startDT).read().split('\n'):
+for line in os.popen("/resource/apps/simple-web/bin/slurm_report_usagepercent_from.sh " + startDT).read().split('\n'):
 	if line == '': continue
 	
-	(user, active, years) = line.split()
-	dataStore.write("USER=" + user + "," + active + "," + years + "\n")
+	(user, perc, active) = line.split()
+	dataStore.write("USER=" + user + "," + perc + "," + active + "\n")
 
 dataStore.write("END\n")
 dataStore.close()

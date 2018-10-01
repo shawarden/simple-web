@@ -42,7 +42,7 @@ def deHumanize(string):
 
 # Create dictionary of slurm jobs currently running on this node.
 sqDict = {}
-for line in os.popen("squeue --nodelist=" + hostName + " -ho '%.20A %20u %20a %.20F_%100K %.20M %20l %.20T %.20P %20C %20m %R %j' | sed 's/,/@@/g' | awk -v OFS=',' '$1=$1'").read().split('\n'):
+for line in os.popen("squeue --nodelist=" + hostName + " -ho '%.100A %100u %100a %.20F_%100K %.20M %100l %.20T %.20P %100C %100m %R %j' | sed 's/,/@@/g' | awk -v OFS=',' '$1=$1'").read().split('\n'):
 	# Is last line blank again?
 	if line == '': continue
 	
@@ -54,7 +54,7 @@ for line in os.popen("squeue --nodelist=" + hostName + " -ho '%.20A %20u %20a %.
 # Create dictionary of pending jobs
 if "dsmc0" in hostName:
 	sqqDict = {}
-	for line in os.popen("squeue -t PENDING -ho '%.20A %20u %20a %.20F_%100K %.20M %20l %.20T %.20P %20C %20m %R %j' | sed 's/,/@@/g' | awk -v OFS=',' '$1=$1'").read().split('\n'):
+	for line in os.popen("squeue -t PENDING -ho '%.20A %100u %100a %.20F_%100K %.20M %100l %.20T %.20P %100C %100m %R %j' | sed 's/,/@@/g' | awk -v OFS=',' '$1=$1'").read().split('\n'):
 		if line == '': continue
 		
 		lineBlocks = line.split(',')
