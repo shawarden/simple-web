@@ -95,7 +95,7 @@ var getSource = function(fileName) {
 }
 
 var updateUsers = function(oldDataSet) {
-	try {var lines = getPage("http://dsmc0.otago.ac.nz/userlist.txt");}
+	try {var lines = getPage("userlist.txt");}
 	catch (err) {return oldDataSet;}
 	
 	try {var len = lines.length;}
@@ -119,7 +119,7 @@ var updateUsers = function(oldDataSet) {
 }
 
 var updateCluster = function(oldDataSet) {
-	try {var lines = getSource("http://dsmc0.otago.ac.nz/slurm_cluster_stats.txt");}
+	try {var lines = getSource("slurm_cluster_stats.txt");}
 	catch (err) {return;}
 	
 	try {var len = lines.length;}
@@ -337,10 +337,10 @@ var updateData = function() {
 	
 	var jobSet      = new Object();	// jobid, user, account, etc
 	for (host in hostStats) {
-		jobSet = {...jobSet, ...getJobSetFromFile("http://dsmc0.otago.ac.nz/slurm_task_tracker_" + host + ".txt")};
+		jobSet = {...jobSet, ...getJobSetFromFile("slurm_task_tracker_" + host + ".txt")};
 	}
 	
-	var pendSet = getJobSetFromFile("http://dsmc0.otago.ac.nz/slurm_pending_tasks.txt");
+	var pendSet = getJobSetFromFile("slurm_pending_tasks.txt");
 	
 	document.getElementById('jobData').innerHTML = "<tr>\
 <th>User</th>\
