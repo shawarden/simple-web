@@ -16,11 +16,10 @@ $1!="" {
 END {
 	for (userID in cpuMins) {
 		if ( cpuMins[userID] > 0 ) {
-			if (userID !~ "testuser") {
-				printf "%s %.10f\n", userID, (cpuMins[userID]/sum)*100
-			}
+			printf "%s %d %.10f\n", userID, cpuMins[userID]*60, (cpuMins[userID]/sum)*100
 		}
 	}
+	printf "CLUSTERTOTAL %d 100.0\n", (sum*60)
 }
 ' | \
 	sort -rhk2))

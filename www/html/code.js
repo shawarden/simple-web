@@ -153,8 +153,9 @@ var updateCluster = function(oldDataSet) {
 			case 'USER':	// User usage
 				userUsage[data[0]] = {
 					'running' : false,
-					'usage'   : parseFloat(parseFloat(data[1]).toFixed(2)),
-					'online'  : data[2]
+					'cpusec'  : parseInt(data[1]),
+					'percent' : parseFloat(parseFloat(data[2]).toFixed(2)),
+					'online'  : data[3]
 				};
 				break;
 			default:
@@ -242,9 +243,9 @@ var printJobs = function(dataSet, bRun=true) {
 		
 		line     += "<td title='";
 		line     += (thisSet.user in userData ? userData[thisSet.user].name : "Unknown");
-		line     += "'> &nbsp; " + thisSet.user.replace('student+','') + " &nbsp; </td>";
+		line     += "'>&nbsp;" + thisSet.user.replace('student+','') + "&nbsp;</td>";
 		
-		line     += "<td title='" + jobid + "'> &nbsp; " + thisSet.array + " &nbsp; </td>";
+		line     += "<td title='" + jobid + "'>&nbsp;" + thisSet.array + "&nbsp;</td>";
 		
 		line     += "<td style='text-align:right;'>";
 		
@@ -252,16 +253,22 @@ var printJobs = function(dataSet, bRun=true) {
 			var runPercent  = Math.round((thisSet.runtime / thisSet.maxtime) * 100)
 			
 			line += "<div class='perc' style='background-size: " + runPercent + "% 100%'/>";
-			line += "<div style='justify-content:right;' title='" + runPercent + "% of " + toDHMS(thisSet.maxtime) + "'> &nbsp; ";
+			line += "<div title='" + runPercent + "% of " + toDHMS(thisSet.maxtime) + "'>";
+			line += "<table width='100%' class='inner'>";
+			line += "<tr>";
+			line += "<td style='text-align:right;' class='inner'>&nbsp;";
 			line += toDHMS(thisSet.runtime);
-			line += " &nbsp; </div>";
+			line += "&nbsp;</td>";
+			line += "</tr>";
+			line += "</table>";
+			line += "</div>";
 		} else {
-			line += " &nbsp; " + toDHMS(thisSet.maxtime) + " &nbsp; ";
+			line += "&nbsp;" + toDHMS(thisSet.maxtime) + "&nbsp;";
 		}
 		
 		line     += "</td>";
 		
-		line     += "<td> &nbsp; " + thisSet.state + " &nbsp; </td>";
+		line     += "<td>&nbsp;" + thisSet.state + "&nbsp;</td>";
 		
 		line     += "<td>";
 		
@@ -279,18 +286,30 @@ var printJobs = function(dataSet, bRun=true) {
 			} else if (parseFloat(thisSet.cpupeak) < (parseFloat(thisSet.memalloc) / parseFloat(2.0))) {
 				line += "style='color:rgba(255, 128, 128, 1);' ";
 			}
-*/			line += "title='Curr: " + thisSet.cpuusage + "\nPeak: " + thisSet.cpupeak + "\nPID CMD CPU MEM\n";
+*/			line += "title='";
+			line += "Requ: " + thisSet.cpualloc + "\n";
+			line += "Curr: " + thisSet.cpuusage + "\n";
+			line += "Peak: " + thisSet.cpupeak + "\n";
+			line += "PID CMD CPU MEM\n";
 			for (var pid in thisSet.proclist) {
 				curProc = thisSet.proclist[pid];
 				line += pid + " " + curProc.cmd + " " + curProc.pcpu + " " + humanize(curProc.memu) + "B\n";
 			}
-			line += "'> &nbsp; ";
+			line += "'>";
+			line += "<table width='100%' class='inner'>";
+			line += "<tr>";
+			line += "<td class='inner'>&nbsp;";
 			line += parseFloat(thisSet.cpupeak.toFixed(2)) + "/";
+		} else {
+			line += "&nbsp;";
 		}
 		
-		line     += thisSet.cpualloc + " &nbsp; ";
+		line     += thisSet.cpualloc + "&nbsp;";
 		
 		if (bRun) {
+			line += "</td>";
+			line += "</tr>";
+			line += "</table>";
 			line += "</div>";
 		}
 		
@@ -312,17 +331,26 @@ var printJobs = function(dataSet, bRun=true) {
 			line += "Requ " + humanize(thisSet.memalloc,2) + "\n";
 			line += "Curr " + humanize(thisSet.memusage,2) + " (" + memUsePerc + "%)\n"; 
 			line += "Peak " + humanize(thisSet.mempeak,2) + " (" + memPeakPerc + "%)";
-			line += "'> &nbsp; " + humanize(thisSet.mempeak) + "/";
+			line += "'>";
+			line += "<table width='100%' class='inner'>";
+			line += "<tr>";
+			line += "<td class='inner'>&nbsp;";
+			line += humanize(thisSet.mempeak) + "/";
+		} else {
+			line += "&nbsp;";
 		}
 		
-		line     += humanize(thisSet.memalloc) + " &nbsp; ";
+		line     += humanize(thisSet.memalloc) + "&nbsp;";
 		
 		if (bRun) {
+			line += "</td>";
+			line += "</tr>";
+			line += "</table>";
 			line += "</div>";
 		}
 		line     += "</td>";
-		line     += "<td> &nbsp; " + thisSet.hostname + " &nbsp; </td>";
-		line     += "<td> &nbsp; " + thisSet.jobname + " &nbsp; </td>";
+		line     += "<td>&nbsp;" + thisSet.hostname + "&nbsp;</td>";
+		line     += "<td>&nbsp;" + thisSet.jobname + "&nbsp;</td>";
 		line     += "</tr>";
 		
 		output = output + line;
@@ -359,18 +387,29 @@ var updateData = function() {
 	for (var i = 0; i < spans.length; i++) {
 		var curSpan = coreYears[spans[i]];
 		var curPerc = Math.round((curSpan.used / curSpan.avail) * 100)
+		var cyAvail = parseFloat(parseFloat(curSpan.avail).toFixed(1))
+		var cyUsed  = parseFloat(parseFloat(curSpan.used).toFixed(1))
 		
 		outML += "<tr>";
-		outML += "<td title='" + parseFloat(curSpan.used).toFixed(2) + " of " + parseFloat(curSpan.avail).toFixed(2) + " CPU Years'>";
+		outML += "<td title='" + cyUsed + " of " + cyAvail + " CPU Years'>";
 		outML += "<div class='perc' style='background-size: "+ curPerc + "% 100%'/>";
 		outML += "<div>";
-		outML += "<table width='100%' class='inner'><tr><td class='inner'> &nbsp; " + spans[i] + " &nbsp; </td><td class='inner' style='text-align:right'> &nbsp; " + curPerc + "% &nbsp; </td><tr></table>";
+		outML += "<table width='100%' class='inner'>";
+		outML += "<tr>";
+		outML += "<td class='inner'>&nbsp;";
+		outML += spans[i];
+		outML +=  "&nbsp;</td>";
+		outML += "<td class='inner' style='text-align:right'>&nbsp;";
+		outML += curPerc;
+		outML += "%&nbsp;</td>";
+		outML += "<tr>";
+		outML += "</table>";
 		outML += "</div>";
 		outML += "</td>";
 		outML += "</tr>";
 		
 	}
-	outML += "<tr><th> &nbsp; </th></tr>";
+	outML += "<tr><th>&nbsp;</th></tr>";
 	
 	outML += "<tr><th>Cores<th></tr>";
 	for (var host in hostStats) {
@@ -382,11 +421,19 @@ var updateData = function() {
 		outML += "<td title='Allocated: " + curHost.cpualloc + " (" + curLock + "%)\nUtilized: " + parseFloat(curHost.cpuusage.toFixed(2)) + " (" + curUsed + "%)'>";
 		outML += "<div class='peak' style='background-size: "+ curLock + "% 100%'/>";
 		outML += "<div class='perc' style='background-size: "+ curUsed + "% 100%'/>";
-		outML += "<div> &nbsp; " + curHost.cpualloc + "/" + curHost.cpumax + " &nbsp; </div>";
+		outML += "<div>";
+		outML += "<table width='100%' class='inner'>";
+		outML += "<tr>";
+		outML += "<td class='inner'>&nbsp;";
+		outML += curHost.cpualloc + "/" + curHost.cpumax;
+		outML += "&nbsp;</td>";
+		outML += "</tr>";
+		outML += "</table>";
+		outML += "</div>";
 		outML += "</td>";
 		outML += "</tr>";
 	}
-	outML += "<tr><th> &nbsp; </th></tr>";
+	outML += "<tr><th>&nbsp;</th></tr>";
 	
 	outML += "<tr><th>Memory<th></tr>";
 	for (var host in hostStats) {
@@ -398,28 +445,48 @@ var updateData = function() {
 		outML += "<td title='Allocated: " + humanize(curHost.memalloc,2) + " ( " + curLock + "%)\nUtilized: " + humanize(curHost.memusage,2) + " ( " + curUsed + "%'>";
 		outML += "<div class='peak' style='background-size: "+ curLock + "% 100%'/>";
 		outML += "<div class='perc' style='background-size: "+ curUsed + "% 100%'/>";
-		outML += "<div> &nbsp; " + humanize(curHost.memalloc) + "/" + humanize(curHost.memmax) + " &nbsp; </div>";
+		outML += "<div>";
+		outML += "<table width='100%' class='inner'>";
+		outML += "<tr>";
+		outML += "<td class='inner'>&nbsp;";
+		outML += humanize(curHost.memalloc) + "/" + humanize(curHost.memmax);
+		outML += "&nbsp;</td>";
+		outML += "<tr>";
+		outML += "</table>";
+		outML += "</div>";
 		outML += "</td>";
 		outML += "</tr>";
 	}
-	outML += "<tr><th> &nbsp; </th></tr>";
+	outML += "<tr><th>&nbsp;</th></tr>";
 	
 	outML += "<tr><th>Users Online<th></tr>";
 	for (var user in userUsage) {
 		if (user.toLowerCase() in userData) {
-			var curUser = userUsage[user];
+			var curUser  = userUsage[user];
+			var cpuPerc  = Math.round(curUser.percent)
 			
 			if (curUser.online == 1) {
 				outML += "<tr>";
-				outML += "<td title='" + userData[user].name + ": " + curUser.usage + "%'>";
-				outML += "<div class='perc' style='background-size: " + curUser.usage + "% 100%'/>";
-				outML += "<div> &nbsp; " + user.replace('student+','') + " &nbsp; </div>";
+				outML += "<td title='" + userData[user].name + ": " + toDHMS(curUser.cpusec) + " CPU time'>";
+				outML += "<div class='perc' style='background-size: " + cpuPerc + "% 100%'/>";
+				outML += "<div>";
+				outML += "<table width='100%' class='inner'>";
+				outML += "<tr>";
+				outML += "<td class='inner'>&nbsp;";
+				outML += user.replace('student+','');
+				outML += "&nbsp;</td>";
+				outML += "<td class='inner' style='text-align:right'>&nbsp;";
+				outML += cpuPerc;
+				outML += "%&nbsp;</td>";
+				outML += "<tr>";
+				outML += "</table>";
+				outML += "</div>";
 				outML += "</td>";
 				outML += "</tr>";
 			}
 		}
 	}
-	outML += "<tr><th> &nbsp; </th></tr>";
+	outML += "<tr><th>&nbsp;</th></tr>";
 	
 	document.getElementById('stats').innerHTML = outML
 	

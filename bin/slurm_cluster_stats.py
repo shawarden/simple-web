@@ -44,8 +44,8 @@ for line in os.popen("""sinfo -h -p funder --Node -o %n,%m,%C""").read().split('
 for line in os.popen("/resource/apps/simple-web/bin/slurm_report_usagepercent_from.sh " + startDT).read().split('\n'):
 	if line == '': continue
 	
-	(user, perc, active) = line.split()
-	dataStore.write("USER=" + user + "," + perc + "," + active + "\n")
+	(user, cpusec, perc, active) = line.split()
+	dataStore.write("USER=" + user + "," + cpusec + "," + perc + "," + active + "\n")
 
 dataStore.write("END\n")
 dataStore.close()
