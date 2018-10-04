@@ -1,31 +1,56 @@
 #!/usr/bin/env python
 
-import os
+import os,settings
 import datetime as DT
 
-dataFile  = "/dev/shm/slurm_cluster_stats.txt"
-
-# File to track peak datasets
 now = DT.datetime.now()
-startDT = (DT.date(2017,1,1)).strftime("%Y-%m-%dT%H:%M:%S")
+startDT = (DT.date(settings.clusterLive['year'],settings.clusterLive['month'],settings.clusterLive['day'])).strftime("%Y-%m-%dT%H:%M:%S")
 yearAgo = (now - DT.timedelta(days=365)).strftime("%Y-%m-%dT%H:%M:%S")
 mnthAgo = (now - DT.timedelta(days=28)).strftime("%Y-%m-%dT%H:%M:%S")
 weekAgo = (now - DT.timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%S")
 
-# This is the slow stuff... 
-cyfStart = os.popen("/resource/apps/simple-web/bin/slurm_report_years_from.sh " + startDT).read().split('\n')[0]
-cyfYear  = os.popen("/resource/apps/simple-web/bin/slurm_report_years_from.sh " + yearAgo).read().split('\n')[0]
-cyfMonth = os.popen("/resource/apps/simple-web/bin/slurm_report_years_from.sh " + mnthAgo).read().split('\n')[0]
-cyfWeek  = os.popen("/resource/apps/simple-web/bin/slurm_report_years_from.sh " + weekAgo).read().split('\n')[0]
+#######
+# This stuff can be slow, leading to long write times.
+#######
 
-cufStart = os.popen("/resource/apps/simple-web/bin/slurm_report_usage_from.sh " + startDT).read().split('\n')[0]
-cufYear  = os.popen("/resource/apps/simple-web/bin/slurm_report_usage_from.sh " + yearAgo).read().split('\n')[0]
-cufMonth = os.popen("/resource/apps/simple-web/bin/slurm_report_usage_from.sh " + mnthAgo).read().split('\n')[0]
-cufWeek  = os.popen("/resource/apps/simple-web/bin/slurm_report_usage_from.sh " + weekAgo).read().split('\n')[0]
+cyfStart = os.popen(settings.pathSource + "/bin/slurm_report_years_from.sh " + startDT).read().split('\n')[0]
+cyfYear  = os.popen(settings.pathSource + "/bin/slurm_report_years_from.sh " + yearAgo).read().split('\n')[0]
+cyfMonth = os.popen(settings.pathSource + "/bin/slurm_report_years_from.sh " + mnthAgo).read().split('\n')[0]
+cyfWeek  = os.popen(settings.pathSource + "/bin/slurm_report_years_from.sh " + weekAgo).read().split('\n')[0]
 
-# On to the fast stuff...
+cufStart = os.popen(settings.pathSource + "/bin/slurm_report_usage_from.sh " + startDT).read().split('\n')[0]
+cufYear  = os.popen(settings.pathSource + "/bin/slurm_report_usage_from.sh " + yearAgo).read().split('\n')[0]
+cufMonth = os.popen(settings.pathSource + "/bin/slurm_report_usage_from.sh " + mnthAgo).read().split('\n')[0]
+cufWeek  = os.popen(settings.pathSource + "/bin/slurm_report_usage_from.sh " + weekAgo).read().split('\n')[0]
 
-dataStore = open(dataFile, "w")
+# Get per-host information
+# Hostname, physical mem, core allocations
+hostDict = {}
+for line in os.popen("""sinfo -h -p """ + settings.clusterPartition + """ --Node -o %n,%m,%C""").read().split('\n'):
+	# last line is empty...
+	if line == '': continue
+	
+	(hostname, memAvail, cpuData) = line.split(',')
+	(cpuAlloc, cpuIdle, cpuOther, cpuTotal) = cpuData.split('/')
+	
+	# Convert memory allocation from MB do B.
+	hostDict[hostname] = str(int(memAvail) * settings.memMult * settings.memMult) + "," + cpuAlloc + "," + cpuIdle + "," + cpuTotal
+
+# Get per user usage.
+# username, cpu usage in seconds, overall percent usage compared to everyone else, if they are online.
+userList = []
+for line in os.popen(settings.pathSource + "/bin/slurm_report_usagepercent_from.sh " + startDT).read().split('\n'):
+	# last line is empty...
+	if line == '': continue
+	
+	(user, cpusec, perc, active) = line.split()
+	userList.append(user + "," + cpusec + "," + perc + "," + active)
+
+#####
+# Dumping data is pretty quick.
+#####
+
+dataStore = open(settings.fileCluster, "w")
 dataStore.write("START\n")
 
 dataStore.write("CORE=Lifetime," + cyfStart + "," + cufStart + "\n")
@@ -33,19 +58,11 @@ dataStore.write("CORE=Yearly,"   + cyfYear  + "," + cufYear  + "\n")
 dataStore.write("CORE=Monthly,"  + cyfMonth + "," + cufMonth + "\n")
 dataStore.write("CORE=Weekly,"   + cyfWeek  + "," + cufWeek  + "\n")
 
-for line in os.popen("""sinfo -h -p funder --Node -o %n,%m,%C""").read().split('\n'):
-	if line == '': continue
-	
-	blocks = line.split(',')
-	(hostname, memAvail, cpuData) = line.split(',')
-	(cpuAlloc, cpuIdle, cpuOther, cpuTotal) = cpuData.split('/')
-	dataStore.write("HOST=" + hostname + "," + str(int(memAvail) * 1024 * 1024) + "," + cpuAlloc + "," + cpuIdle + "," + cpuTotal + "\n")
-	
-for line in os.popen("/resource/apps/simple-web/bin/slurm_report_usagepercent_from.sh " + startDT).read().split('\n'):
-	if line == '': continue
-	
-	(user, cpusec, perc, active) = line.split()
-	dataStore.write("USER=" + user + "," + cpusec + "," + perc + "," + active + "\n")
+for host in hostDict:
+	dataStore.write("HOST=" + host + "," + hostDict[host] + "\n")
+
+for i in range(len(userList)):
+	dataStore.write("USER=" + userList[i] + "\n")
 
 dataStore.write("END\n")
 dataStore.close()

@@ -1,3 +1,67 @@
+// ENUMs
+const REFRESH_RATE = 6000;
+
+const FILE_USER = "userlist.txt";
+const FILE_STAT = "slurm_cluster_stats.txt";
+const FILE_JOB1 = "slurm_task_tracker_";
+const FILE_JOB2 = ".txt";
+const FILE_PEND = "slurm_pending_tasks.txt"
+
+const JOB_ID        = 0;
+const JOB_USER      = 1;
+const JOB_ACCOUNT   = 2;
+const JOB_ARRAY     = 3;
+const JOB_ELAPSED   = 4;
+const JOB_TIMELIMIT = 5;
+const JOB_STATE     = 6;
+const JOB_PARTITION = 7;
+const JOB_CPUALLOC  = 8;
+const JOB_MEMALLOC  = 9;
+const JOB_HOSTLIST  = 10;
+const JOB_JOBNAME   = 11;
+const JOB_CPUUSAGE  = 12;
+const JOB_CPUPEAK   = 13;
+const JOB_MEMUSAGE  = 14;
+const JOB_MEMPEAK   = 15;
+const JOB_PROCLIST  = 16;
+
+const PROC_PID  = 0;
+const PROC_CMD  = 1;
+const PROC_PCPU = 2;
+const PROC_MEM  = 3;
+
+const SEC_PERSEC  = 1;
+const SEC_PERMIN  = 60;
+const SEC_PERHOUR = 3600;
+const SEC_PERDAY  = 86400;
+
+const SIZE_MULT   = 1024;
+const SIZE_STRING = " KMGTPE";
+
+const USER_ID    = 0;
+const USER_NAME  = 1;
+const USER_EMAIL = 2;
+const USER_ALT   = 3;
+const USER_SHARE = 4;
+
+const HOST_BLOCK    = 0;
+const HOST_DATA     = 1;
+
+const HOST_NAME     = 0;
+const HOST_MEMMAX   = 1;
+const HOST_CPUALLOC = 2;
+const HOST_CPUIDLE  = 3;
+const HOST_CPUMAX   = 4;
+
+const CORE_FRAME = 0;
+const CORE_AVAIL = 1;
+const CORE_USED  = 2;
+
+const USAGE_USER    = 0;
+const USAGE_CPUSEC  = 1;
+const USAGE_PERCENT = 2;
+const USAGE_ONLINE  = 3;
+
 var hostStats = new Object();
 var userUsage = new Object();
 var coreYears = new Object();
@@ -7,7 +71,7 @@ var memUsage  = new Object();
 
 var toSeconds = function(timeString) {
 	var dhms  = timeString.split(/-|:/);
-	var multi = [1,60,3600,86400]
+	var multi = [SEC_PERSEC,SEC_PERMIN,SEC_PERHOUR,SEC_PERDAY]
 	var len   = (dhms.length);
 	var secs  = 0
 	for (var i=0; i < len; i++) {
@@ -18,10 +82,10 @@ var toSeconds = function(timeString) {
 }
 
 var toDHMS = function(seconds) {
-	var days = Math.floor(seconds / 86400);
-	var hrs  = Math.floor((seconds % 86400) / 3600);
-	var mins = Math.floor((seconds % 3600) / 60);
-	var secs = (seconds % 60);
+	var days = Math.floor(seconds / SEC_PERDAY);
+	var hrs  = Math.floor((seconds % SEC_PERDAY) / SEC_PERHOUR);
+	var mins = Math.floor((seconds % SEC_PERHOUR) / SEC_PERMIN);
+	var secs = (seconds % SEC_PERMIN);
 	
 	var output = '';
 	output    += (days > 0 ? days + "-" : '');
@@ -34,14 +98,16 @@ var toDHMS = function(seconds) {
 }
 
 var humanize = function(num, precision=0) {
-	var mult = " KMGTPE";
 	var i    = 0;
 	var fNum = num;
-	while (fNum > 1024) {
-		fNum /= 1024
+	while (fNum > SIZE_MULT) {
+		fNum /= parseFloat(SIZE_MULT)
 		i++
 	}
-	return '' + parseFloat(fNum.toFixed(precision)) + (mult[i] != " " ? mult[i] : "") + ''
+	try { var output = parseFloat(fNum.toFixed(precision)) }
+	catch (e) { return num }
+	
+	return parseFloat(fNum.toFixed(precision)) + (SIZE_STRING[i] != ' ' ? SIZE_STRING[i] : '')
 }
 
 var getPage = function(url) {
@@ -95,7 +161,7 @@ var getSource = function(fileName) {
 }
 
 var updateUsers = function(oldDataSet) {
-	try {var lines = getPage("userlist.txt");}
+	try {var lines = getPage(FILE_USER);}
 	catch (err) {return oldDataSet;}
 	
 	try {var len = lines.length;}
@@ -106,11 +172,11 @@ var updateUsers = function(oldDataSet) {
 	for (var i = 0; i < len; i++) {
 		blocks = lines[i].split(":");
 		if (blocks.length == 5) {	// Contains data
-			newDataSet[blocks[0].toLowerCase()] = {
-				'name'  : blocks[1],
-				'email' : blocks[2],
-				'alt'   : blocks[3],
-				'store' : blocks[4]
+			newDataSet[blocks[USER_ID].toLowerCase()] = {
+				'name'  : blocks[USER_NAME],
+				'email' : blocks[USER_EMAIL],
+				'alt'   : blocks[USER_ALT],
+				'share' : blocks[USER_SHARE]
 			};
 		}
 	}
@@ -119,7 +185,7 @@ var updateUsers = function(oldDataSet) {
 }
 
 var updateCluster = function(oldDataSet) {
-	try {var lines = getSource("slurm_cluster_stats.txt");}
+	try {var lines = getSource(FILE_STAT);}
 	catch (err) {return;}
 	
 	try {var len = lines.length;}
@@ -127,35 +193,35 @@ var updateCluster = function(oldDataSet) {
 	
 	for (var i = 0; i < len; i++) {
 		var line  = lines[i].split('=');
-		var chunk = line[0];
-		var data  = line[1].split(',');
+		var chunk = line[HOST_BLOCK];
+		var data  = line[HOST_DATA].split(',');
 		
 		// What lines are we getting here?
 		switch (chunk) {
 			case 'HOST':	// Host properties
-				hostStats[data[0]] = {
+				hostStats[data[HOST_NAME]] = {
+					'memmax'   : parseInt(data[HOST_MEMMAX]),
+					'cpualloc' : parseInt(data[HOST_CPUALLOC]),
+					'cpuidle'  : parseInt(data[HOST_CPUIDLE]),
+					'cpumax'   : parseInt(data[HOST_CPUMAX]),
 					'memalloc' : 0,
 					'memusage' : 0,
-					'memmax'   : data[1],
 					'cpupeak'  : 0,
-					'cpuusage' : 0,
-					'cpualloc' : data[2],
-					'cpuidle'  : data[3],
-					'cpumax'   : data[4]
+					'cpuusage' : 0
 				};
 				break;
 			case 'CORE':	// Core usage
-				coreYears[data[0]] = {
-					'avail' : data[1],
-					'used'  : data[2]
+				coreYears[data[CORE_FRAME]] = {
+					'avail' : parseFloat(data[CORE_AVAIL]),
+					'used'  : parseFloat(data[CORE_USED])
 				};
 				break;
 			case 'USER':	// User usage
-				userUsage[data[0]] = {
-					'running' : false,
-					'cpusec'  : parseInt(data[1]),
-					'percent' : parseFloat(parseFloat(data[2]).toFixed(2)),
-					'online'  : data[3]
+				userUsage[data[USAGE_USER]] = {
+					'cpusec'  :   parseInt(data[USAGE_CPUSEC]),
+					'percent' : parseFloat(data[USAGE_PERCENT]),
+					'online'  :   parseInt(data[USAGE_ONLINE]),
+					'running' : false
 				};
 				break;
 			default:
@@ -181,48 +247,47 @@ var getJobSetFromFile = function(fileName) {
 			
 			// Build process list
 			var procSet  = new Object();
-			if (line.length == 17) {
-				var procList = line[16].split('|');
+			if (line.length == (JOB_PROCLIST+1)) {
+				var procList = line[JOB_PROCLIST].split('|');
 				var procCnt  = procList.length;
 				
 				for (var j = 0; j < procCnt; j++) {
 					var procData = procList[j].split(':');
-					procSet[procData[0]] = {
-						'cmd'  : procData[1],
-						'pcpu' : parseFloat(procData[2]),
-						'memu' : parseInt(procData[3])
+					procSet[procData[PROC_PID]] = {
+						'cmd'  : procData[PROC_CMD],
+						'pcpu' : parseFloat(procData[PROC_PCPU]),
+						'memu' : parseInt(procData[PROC_MEM])
 					};
 				}
 			}
 			
-			newDataSet[line[0]] = {
-				'user'      : line[1].toLowerCase(),
-				'account'   : line[2],
-				'array'     : line[3].replace(/@@/g, ','),
-				'runtime'   : line[4],
-				'maxtime'   : line[5],
-				'state'     : line[6],
-				'partition' : line[7],
-				'cpualloc'  : line[8],
-				'memalloc'  : line[9],
-				'hostname'  : line[10].replace(/@@/g, ','),
-				'jobname'   : line[11].replace(/@@/g, ','),
-				'cpuusage'  : line[12] != null ? parseFloat(line[12]) : 0,
-				'cpupeak'   : line[13] != null ? parseFloat(line[13]) : 0,
-				'memusage'  : line[14] != null ? line[14] : 0,
-				'mempeak'   : line[15] != null ? line[15] : 0,
+			newDataSet[line[JOB_ID]] = {
+				'user'      : line[JOB_USER].toLowerCase(),
+				'account'   : line[JOB_ACCOUNT],
+				'array'     : line[JOB_ARRAY].replace(/@@/g, ','),
+				'runtime'   : parseInt(line[JOB_ELAPSED]),
+				'maxtime'   : parseInt(line[JOB_TIMELIMIT]),
+				'state'     : line[JOB_STATE],
+				'partition' : line[JOB_PARTITION],
+				'cpualloc'  : parseInt(line[JOB_CPUALLOC]),
+				'memalloc'  : parseInt(line[JOB_MEMALLOC]),
+				'hostname'  : line[JOB_HOSTLIST].replace(/@@/g, ','),
+				'jobname'   : line[JOB_JOBNAME].replace(/@@/g, ','),
+				'cpuusage'  : line[JOB_CPUUSAGE] != null ? parseFloat(line[JOB_CPUUSAGE]) : 0,
+				'cpupeak'   : line[JOB_CPUPEAK]  != null ? parseFloat(line[JOB_CPUPEAK]) : 0,
+				'memusage'  : line[JOB_MEMUSAGE] != null ?   parseInt(line[JOB_MEMUSAGE]) : 0,
+				'mempeak'   : line[JOB_MEMPEAK]  != null ?   parseInt(line[JOB_MEMPEAK]) : 0,
 				'proclist'  : procSet
 			};
 			
-			var host = newDataSet[line[0]].hostname
-			var user = newDataSet[line[0]].user
+			var host = newDataSet[line[JOB_ID]].hostname
+			var user = newDataSet[line[JOB_ID]].user
 			
 			if (host in hostStats) {	// Pending jobs bump into me!
-				hostStats[host].memalloc +=   parseInt(newDataSet[line[0]].memalloc);
-				hostStats[host].memusage +=   parseInt(newDataSet[line[0]].memusage);
-				hostStats[host].cpupeak  += parseFloat(newDataSet[line[0]].cpupeak);
-				hostStats[host].cpuusage += parseFloat(newDataSet[line[0]].cpuusage);
-				
+				hostStats[host].memalloc +=   parseInt(newDataSet[line[JOB_ID]].memalloc);
+				hostStats[host].memusage +=   parseInt(newDataSet[line[JOB_ID]].memusage);
+				hostStats[host].cpupeak  += parseFloat(newDataSet[line[JOB_ID]].cpupeak);
+				hostStats[host].cpuusage += parseFloat(newDataSet[line[JOB_ID]].cpuusage);
 			}
 			
 			if (user in userData) {
@@ -365,10 +430,10 @@ var updateData = function() {
 	
 	var jobSet      = new Object();	// jobid, user, account, etc
 	for (host in hostStats) {
-		jobSet = {...jobSet, ...getJobSetFromFile("slurm_task_tracker_" + host + ".txt")};
+		jobSet = {...jobSet, ...getJobSetFromFile(FILE_JOB1 + host + FILE_JOB2)};
 	}
 	
-	var pendSet = getJobSetFromFile("slurm_pending_tasks.txt");
+	var pendSet = getJobSetFromFile(FILE_PEND);
 	
 	document.getElementById('jobData').innerHTML = "<tr>\
 <th>User</th>\
@@ -418,7 +483,9 @@ var updateData = function() {
 		var curLock = Math.round((curHost.cpualloc / curHost.cpumax) * 100)
 		
 		outML += "<tr>";
-		outML += "<td title='Allocated: " + curHost.cpualloc + " (" + curLock + "%)\nUtilized: " + parseFloat(curHost.cpuusage.toFixed(2)) + " (" + curUsed + "%)'>";
+		outML += "<td title='";
+		outML += "Allocated: " + curHost.cpualloc + " (" + curLock + "%)\n";
+		outML += "Utilized: " + parseFloat(curHost.cpuusage.toFixed(2)) + " (" + curUsed + "%)'>";
 		outML += "<div class='peak' style='background-size: "+ curLock + "% 100%'/>";
 		outML += "<div class='perc' style='background-size: "+ curUsed + "% 100%'/>";
 		outML += "<div>";
@@ -442,7 +509,9 @@ var updateData = function() {
 		var curLock = Math.round((curHost.memalloc / curHost.memmax) * 100)
 		
 		outML += "<tr>";
-		outML += "<td title='Allocated: " + humanize(curHost.memalloc,2) + " ( " + curLock + "%)\nUtilized: " + humanize(curHost.memusage,2) + " ( " + curUsed + "%'>";
+		outML += "<td title='";
+		outML += "Allocated: " + humanize(curHost.memalloc,2) + " (" + curLock + "%)\n";
+		outML += "Utilized: " + humanize(curHost.memusage,2) + " (" + curUsed + "%)'>";
 		outML += "<div class='peak' style='background-size: "+ curLock + "% 100%'/>";
 		outML += "<div class='perc' style='background-size: "+ curUsed + "% 100%'/>";
 		outML += "<div>";
@@ -492,4 +561,4 @@ var updateData = function() {
 	
 }
 
-window.onload = setInterval(updateData, 6000)
+window.onload = setInterval(updateData, REFRESH_RATE)

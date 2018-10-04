@@ -22,6 +22,16 @@
 
 # Changelog
 
+## 2018-10-05
+
+### Added
+
+- Settings and config files for serves scripts.
+
+### Removed
+
+- System call for hostname
+
 ## 2018-10-03
 
 ### Added
@@ -48,3 +58,4 @@
 - Combine slurm_report_usage_from and slurm_report_usagepercent_from into single sreport call.
 - Adaptable Layout for larger clusters, multiple QoS and multiple clusters.
 - Mobile friendly layout.
+- Internalize numfmt calls.

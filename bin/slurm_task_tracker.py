@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 
-import os,myfuncs 
+import os,myfuncs,settings 
 
 # Current host's name
-hostName = os.popen("hostname -s").read().split('\n')[0]
+hostName  = os.uname()[1].split('.')[0]
 
-# File to track peak datasets
-peakFile = "/dev/shm/slurm_task_tracker_" + hostName + ".txt"
+trackFile = settings.filePeak(hostName)
 
 # Create dictionary of slurm jobs currently running on this node.
 sqDict = {}
@@ -17,20 +16,18 @@ for line in os.popen("squeue --nodelist=" + hostName + " -ho '%.100A %100u %100a
 	lineBlocks = line.split(',')
 	
 	# Store jobID : dataset
-	sqDict[lineBlocks[0]] = lineBlocks[0] + "," + lineBlocks[1] + "," + lineBlocks[2] + "," + lineBlocks[3].replace('_N/A','') + "," + myfuncs.toSeconds(lineBlocks[4]) + "," + myfuncs.toSeconds(lineBlocks[5]) + "," + lineBlocks[6] + "," + lineBlocks[7] + "," + lineBlocks[8] + "," + myfuncs.deHumanize(lineBlocks[9]) + "," + lineBlocks[10].replace('(','').replace(')','').replace('JobArrayTaskLimit','ArrayLimit') + "," + lineBlocks[11]
+	sqDict[lineBlocks[settings.jobLine['jobid']]] = lineBlocks[settings.jobLine['user']] + "," + lineBlocks[settings.jobLine['account']] + "," + lineBlocks[settings.jobLine['jobarray']].replace('_N/A','') + "," + myfuncs.toSeconds(lineBlocks[settings.jobLine['elapsed']]) + "," + myfuncs.toSeconds(lineBlocks[settings.jobLine['timelimit']]) + "," + lineBlocks[settings.jobLine['state']] + "," + lineBlocks[settings.jobLine['partition']] + "," + lineBlocks[settings.jobLine['cpualloc']] + "," + myfuncs.deHumanize(lineBlocks[settings.jobLine['memalloc']]) + "," + lineBlocks[settings.jobLine['hostlist']].replace('(','').replace(')','').replace('JobArrayTaskLimit','ArrayLimit') + "," + lineBlocks[settings.jobLine['jobname']]
 
 # Quit now if no jobs on node.
 if len(sqDict) < 1:
-	curPeak = open(peakFile, "w")
+	curPeak = open(trackFile, "w")
 	curPeak.write("START\nEND\n")
 	curPeak.close()
 	quit()
 
 # Create dictionary of process list.
 psDict = {}
-for line in os.popen(
-	"ps haxo pid,ppid,pcpu,rss,user:20,args"
-).read().split('\n'):
+for line in os.popen("ps haxo pid,ppid,pcpu,rss,user:20,args").read().split('\n'):
 	# Is last line blanb again?
 	if line == '': continue
 	
@@ -41,7 +38,7 @@ for line in os.popen(
 	pid    = blocks[0]
 	ppid   = blocks[1]
 	pcpu   = "{0:.3f}".format(float(blocks[2]) / 100.0)
-	rss    = int(blocks[3]) * 1024
+	rss    = int(blocks[3]) * settings.memMult
 	user   = blocks[4]
 	
 	# Reassemble command lime
@@ -94,8 +91,7 @@ for pid in psDict:
 		
 		# extract cumulative resource usage for each child process.
 		jobTree = {}
-		#for cpid in os.popen("pstree -p " + pid + " | awk -F'[()]' '{for (i=2;i<=NF;i+=2) print $i}'").read().split('\n'):
-		for cpid in myfuncs.psTreeF(pid).split(','):
+		for cpid in myfuncs.psTreeF(pid, parentDict).split(','):
 			# some pids don't exist? wtf.
 			# last line might be empty?
 			if cpid == '' or not cpid in psDict: continue
@@ -108,7 +104,7 @@ for pid in psDict:
 			if "<defunct>" in psDict[cpid]['args']: continue
 			
 			# Assemble jobstep dictionary
-			jobTree[pid] = { 'pcpu' : psDict[cpid]['pcpu'], 'rss' : psDict[cpid]['rss'], 'cmd' : cmd, 'user' : psDict[cpid]['user'] }
+			jobTree[cpid] = { 'pcpu' : psDict[cpid]['pcpu'], 'rss' : psDict[cpid]['rss'], 'cmd' : cmd, 'user' : psDict[cpid]['user'] }
 		
 		# append to existing jobid
 		if jobID in stepDict:
@@ -119,9 +115,9 @@ for pid in psDict:
 # Retrieve previous peak dataset
 peakDict = {}
 # Does the file exist?
-if os.path.isfile(peakFile):
+if os.path.isfile(trackFile):
 	# Open it
-	prevPeak = open(peakFile, "r")
+	prevPeak = open(trackFile, "r")
 	
 	# Cycle through lines
 	for line in prevPeak:
@@ -135,7 +131,7 @@ if os.path.isfile(peakFile):
 	prevPeak.close()
 
 # Store peak dataset
-curPeak = open(peakFile, "w")
+curPeak = open(trackFile, "w")
 curPeak.write("START\n")
 
 # Dump output
@@ -145,12 +141,13 @@ for jobID in stepDict:
 	rss   = int(0)
 	cmds  = ''
 	users = ''
-	
+#	print(jobID)
 	#cycle through jobsteps
 	for jobStep in stepDict[jobID]:
 		# Cycle through pids
+#		print(jobStep)
 		for pid in stepDict[jobID][jobStep]:
-			
+#			print(pid)
 			# add up bits
 			pcpu += float(stepDict[jobID][jobStep][pid]['pcpu'])
 			rss  += int(stepDict[jobID][jobStep][pid]['rss'])
@@ -201,9 +198,8 @@ for jobID in stepDict:
 	pcpu    = maxCPU if pcpu    > maxCPU else pcpu
 	
 	# Dump merged jobid line.
-	outLine = sqDict[jobID] + "," + str(pcpu) + "," + str(peakCPU) + "," + str(rss) + "," + str(peakRSS) + "," + cmds
+	outLine = jobID + "," + sqDict[jobID] + "," + str(pcpu) + "," + str(peakCPU) + "," + str(rss) + "," + str(peakRSS) + "," + hostName + "," + cmds
 	
-	#print(outLine)
 	curPeak.write(outLine + "\n")
 
 curPeak.write("END\n")

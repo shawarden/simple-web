@@ -2,10 +2,10 @@
 
 import os
 
-def psTreeF(ppid):
+def psTreeF(ppid, parentDict):
 	if ppid in parentDict:
 		for pid in parentDict[ppid]:
-			return ppid + "," + psTreeF(pid)
+			return ppid + "," + psTreeF(pid,parentDict)
 	
 	return ppid
 

@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
-import os,myfuncs
-
-pendFile = "/dev/shm/slurm_pending_tasks.txt"
+import os,myfuncs,settings
 
 # Create dictionary of pending jobs
 
@@ -13,9 +11,9 @@ for line in os.popen("squeue -t PENDING -ho '%.20A %100u %100a %.20F_%100K %.20M
 	lineBlocks = line.split(',')
 	
 	# Store jobID : dataset
-	sqqDict[lineBlocks[0]] = lineBlocks[1] + "," + lineBlocks[2] + "," + lineBlocks[3].replace('_N/A','') + "," + myfuncs.toSeconds(lineBlocks[4]) + "," + myfuncs.toSeconds(lineBlocks[5]) + "," + lineBlocks[6] + "," + lineBlocks[7] + "," + lineBlocks[8] + "," + myfuncs.deHumanize(lineBlocks[9]) + "," + lineBlocks[10].replace('(','').replace(')','').replace('JobArrayTaskLimit','ArrayLimit') + "," + lineBlocks[11]
+	sqqDict[lineBlocks[settings.jobLine['jobid']]] = lineBlocks[settings.jobLine['user']] + "," + lineBlocks[settings.jobLine['account']] + "," + lineBlocks[settings.jobLine['jobarray']].replace('_N/A','') + "," + myfuncs.toSeconds(lineBlocks[settings.jobLine['elapsed']]) + "," + myfuncs.toSeconds(lineBlocks[settings.jobLine['timelimit']]) + "," + lineBlocks[settings.jobLine['state']] + "," + lineBlocks[settings.jobLine['partition']] + "," + lineBlocks[settings.jobLine['cpualloc']] + "," + myfuncs.deHumanize(lineBlocks[settings.jobLine['memalloc']]) + "," + lineBlocks[settings.jobLine['hostlist']].replace('(','').replace(')','') + "," + lineBlocks[settings.jobLine['jobname']]
 
-pendList = open(pendFile, "w")
+pendList = open(settings.filePending, "w")
 pendList.write("START\n")
 
 for jobid in sqqDict:
