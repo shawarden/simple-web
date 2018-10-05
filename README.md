@@ -26,7 +26,7 @@
 
 ### Added
 
-- Settings and config files for serves scripts.
+- Settings and config files.
 
 ### Removed
 

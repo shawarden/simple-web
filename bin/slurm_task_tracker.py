@@ -185,7 +185,7 @@ for jobID in stepDict:
 	# Normalize CPU usage if userland threads exceed 100% 	
 	# Not entirely sure how a process that's locked to cores X~Y can exceed 100% capacity of X~Y
 	# Perhaps it's due to the way 'ps' reports pcpu values?
-	maxCPU = float(sqDict[jobID].split(',')[8])
+	maxCPU = float(sqDict[jobID].split(',')[settings.jobLine['cpualloc']])
 	
 	if jobID in peakDict:
 		peakCPU = pcpu if pcpu > peakDict[jobID]['pcpu'] else peakDict[jobID]['pcpu']

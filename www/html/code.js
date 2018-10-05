@@ -1,67 +1,3 @@
-// ENUMs
-const REFRESH_RATE = 6000;
-
-const FILE_USER = "userlist.txt";
-const FILE_STAT = "slurm_cluster_stats.txt";
-const FILE_JOB1 = "slurm_task_tracker_";
-const FILE_JOB2 = ".txt";
-const FILE_PEND = "slurm_pending_tasks.txt"
-
-const JOB_ID        = 0;
-const JOB_USER      = 1;
-const JOB_ACCOUNT   = 2;
-const JOB_ARRAY     = 3;
-const JOB_ELAPSED   = 4;
-const JOB_TIMELIMIT = 5;
-const JOB_STATE     = 6;
-const JOB_PARTITION = 7;
-const JOB_CPUALLOC  = 8;
-const JOB_MEMALLOC  = 9;
-const JOB_HOSTLIST  = 10;
-const JOB_JOBNAME   = 11;
-const JOB_CPUUSAGE  = 12;
-const JOB_CPUPEAK   = 13;
-const JOB_MEMUSAGE  = 14;
-const JOB_MEMPEAK   = 15;
-const JOB_PROCLIST  = 16;
-
-const PROC_PID  = 0;
-const PROC_CMD  = 1;
-const PROC_PCPU = 2;
-const PROC_MEM  = 3;
-
-const SEC_PERSEC  = 1;
-const SEC_PERMIN  = 60;
-const SEC_PERHOUR = 3600;
-const SEC_PERDAY  = 86400;
-
-const SIZE_MULT   = 1024;
-const SIZE_STRING = " KMGTPE";
-
-const USER_ID    = 0;
-const USER_NAME  = 1;
-const USER_EMAIL = 2;
-const USER_ALT   = 3;
-const USER_SHARE = 4;
-
-const HOST_BLOCK    = 0;
-const HOST_DATA     = 1;
-
-const HOST_NAME     = 0;
-const HOST_MEMMAX   = 1;
-const HOST_CPUALLOC = 2;
-const HOST_CPUIDLE  = 3;
-const HOST_CPUMAX   = 4;
-
-const CORE_FRAME = 0;
-const CORE_AVAIL = 1;
-const CORE_USED  = 2;
-
-const USAGE_USER    = 0;
-const USAGE_CPUSEC  = 1;
-const USAGE_PERCENT = 2;
-const USAGE_ONLINE  = 3;
-
 var hostStats = new Object();
 var userUsage = new Object();
 var coreYears = new Object();
@@ -200,14 +136,14 @@ var updateCluster = function(oldDataSet) {
 		switch (chunk) {
 			case 'HOST':	// Host properties
 				hostStats[data[HOST_NAME]] = {
-					'memmax'   : parseInt(data[HOST_MEMMAX]),
-					'cpualloc' : parseInt(data[HOST_CPUALLOC]),
-					'cpuidle'  : parseInt(data[HOST_CPUIDLE]),
-					'cpumax'   : parseInt(data[HOST_CPUMAX]),
-					'memalloc' : 0,
-					'memusage' : 0,
-					'cpupeak'  : 0,
-					'cpuusage' : 0
+					'memMax'   : parseInt(data[HOST_MEMMAX]),
+					'cpuAlloc' : parseInt(data[HOST_CPUALLOC]),
+					'cpuIdle'  : parseInt(data[HOST_CPUIDLE]),
+					'cpuMax'   : parseInt(data[HOST_CPUMAX]),
+					'memAlloc' : 0,
+					'memUsage' : 0,
+					'cpuPeak'  : 0,
+					'cpuUsage' : 0
 				};
 				break;
 			case 'CORE':	// Core usage
@@ -218,7 +154,7 @@ var updateCluster = function(oldDataSet) {
 				break;
 			case 'USER':	// User usage
 				userUsage[data[USAGE_USER]] = {
-					'cpusec'  :   parseInt(data[USAGE_CPUSEC]),
+					'cpuSec'  :   parseInt(data[USAGE_CPUSEC]),
 					'percent' : parseFloat(data[USAGE_PERCENT]),
 					'online'  :   parseInt(data[USAGE_ONLINE]),
 					'running' : false
@@ -247,7 +183,7 @@ var getJobSetFromFile = function(fileName) {
 			
 			// Build process list
 			var procSet  = new Object();
-			if (line.length == (JOB_PROCLIST+1)) {
+			if (line.length > JOB_PROCLIST) {
 				var procList = line[JOB_PROCLIST].split('|');
 				var procCnt  = procList.length;
 				
@@ -265,29 +201,30 @@ var getJobSetFromFile = function(fileName) {
 				'user'      : line[JOB_USER].toLowerCase(),
 				'account'   : line[JOB_ACCOUNT],
 				'array'     : line[JOB_ARRAY].replace(/@@/g, ','),
-				'runtime'   : parseInt(line[JOB_ELAPSED]),
-				'maxtime'   : parseInt(line[JOB_TIMELIMIT]),
+				'elapsed'   : parseInt(line[JOB_ELAPSED]),
+				'timeLimit' : parseInt(line[JOB_TIMELIMIT]),
 				'state'     : line[JOB_STATE],
 				'partition' : line[JOB_PARTITION],
-				'cpualloc'  : parseInt(line[JOB_CPUALLOC]),
-				'memalloc'  : parseInt(line[JOB_MEMALLOC]),
-				'hostname'  : line[JOB_HOSTLIST].replace(/@@/g, ','),
-				'jobname'   : line[JOB_JOBNAME].replace(/@@/g, ','),
-				'cpuusage'  : line[JOB_CPUUSAGE] != null ? parseFloat(line[JOB_CPUUSAGE]) : 0,
-				'cpupeak'   : line[JOB_CPUPEAK]  != null ? parseFloat(line[JOB_CPUPEAK]) : 0,
-				'memusage'  : line[JOB_MEMUSAGE] != null ?   parseInt(line[JOB_MEMUSAGE]) : 0,
-				'mempeak'   : line[JOB_MEMPEAK]  != null ?   parseInt(line[JOB_MEMPEAK]) : 0,
-				'proclist'  : procSet
+				'cpuAlloc'  : parseInt(line[JOB_CPUALLOC]),
+				'memAlloc'  : parseInt(line[JOB_MEMALLOC]),
+				'hostList'  : line[JOB_HOSTLIST].replace(/@@/g, ','),
+				'jobName'   : line[JOB_JOBNAME].replace(/@@/g, ','),
+				'cpuUsage'  : line[JOB_CPUUSAGE] != null ? parseFloat(line[JOB_CPUUSAGE]) : 0,
+				'cpuPeak'   : line[JOB_CPUPEAK]  != null ? parseFloat(line[JOB_CPUPEAK]) : 0,
+				'memUsage'  : line[JOB_MEMUSAGE] != null ?   parseInt(line[JOB_MEMUSAGE]) : 0,
+				'memPeak'   : line[JOB_MEMPEAK]  != null ?   parseInt(line[JOB_MEMPEAK]) : 0,
+				'hostName'  : line[JOB_HOSTNAME] != null ? line[JOB_HOSTNAME] : '',
+				'procList'  : procSet
 			};
 			
-			var host = newDataSet[line[JOB_ID]].hostname
+			var host = newDataSet[line[JOB_ID]].hostName
 			var user = newDataSet[line[JOB_ID]].user
 			
 			if (host in hostStats) {	// Pending jobs bump into me!
-				hostStats[host].memalloc +=   parseInt(newDataSet[line[JOB_ID]].memalloc);
-				hostStats[host].memusage +=   parseInt(newDataSet[line[JOB_ID]].memusage);
-				hostStats[host].cpupeak  += parseFloat(newDataSet[line[JOB_ID]].cpupeak);
-				hostStats[host].cpuusage += parseFloat(newDataSet[line[JOB_ID]].cpuusage);
+				hostStats[host].memAlloc +=   parseInt(newDataSet[line[JOB_ID]].memAlloc);
+				hostStats[host].memUsage +=   parseInt(newDataSet[line[JOB_ID]].memUsage);
+				hostStats[host].cpuPeak  += parseFloat(newDataSet[line[JOB_ID]].cpuPeak);
+				hostStats[host].cpuUsage += parseFloat(newDataSet[line[JOB_ID]].cpuUsage);
 			}
 			
 			if (user in userData) {
@@ -315,20 +252,20 @@ var printJobs = function(dataSet, bRun=true) {
 		line     += "<td style='text-align:right;'>";
 		
 		if (bRun) {
-			var runPercent  = Math.round((thisSet.runtime / thisSet.maxtime) * 100)
+			var runPercent  = Math.round((thisSet.elapsed / thisSet.timeLimit) * 100)
 			
 			line += "<div class='perc' style='background-size: " + runPercent + "% 100%'/>";
-			line += "<div title='" + runPercent + "% of " + toDHMS(thisSet.maxtime) + "'>";
+			line += "<div title='" + runPercent + "% of " + toDHMS(thisSet.timeLimit) + "'>";
 			line += "<table width='100%' class='inner'>";
 			line += "<tr>";
 			line += "<td style='text-align:right;' class='inner'>&nbsp;";
-			line += toDHMS(thisSet.runtime);
+			line += toDHMS(thisSet.elapsed);
 			line += "&nbsp;</td>";
 			line += "</tr>";
 			line += "</table>";
 			line += "</div>";
 		} else {
-			line += "&nbsp;" + toDHMS(thisSet.maxtime) + "&nbsp;";
+			line += "&nbsp;" + toDHMS(thisSet.timeLimit) + "&nbsp;";
 		}
 		
 		line     += "</td>";
@@ -338,38 +275,38 @@ var printJobs = function(dataSet, bRun=true) {
 		line     += "<td>";
 		
 		if (bRun) {
-			var cpuPeakPerc = Math.round((thisSet.cpupeak  / thisSet.cpualloc) * 100)
-			var cpuUsePerc  = Math.round((thisSet.cpuusage / thisSet.cpualloc) * 100)
+			var cpuPeakPerc = Math.round((thisSet.cpuPeak  / thisSet.cpuAlloc) * 100)
+			var cpuUsePerc  = Math.round((thisSet.cpuUsage / thisSet.cpuAlloc) * 100)
 			
 			line += "<div class='peak' style='background-size: "+ cpuPeakPerc + "% 100%'/>";
 			line += "<div class='perc' style='background-size: "+ cpuUsePerc  + "% 100%'/>";
 			line += "<div ";
-/*			if (parseFloat(thisSet.cpupeak) < (parseFloat(thisSet.memalloc) / parseFloat(8.0))) {
+/*			if (parseFloat(thisSet.cpuPeak) < (parseFloat(thisSet.memAlloc) / parseFloat(8.0))) {
 				line += "style='color:rgba(255, 64, 64, 1);' ";
-			} else if (parseFloat(thisSet.cpupeak) < (parseFloat(thisSet.memalloc) / parseFloat(4.0))) {
+			} else if (parseFloat(thisSet.cpuPeak) < (parseFloat(thisSet.memAlloc) / parseFloat(4.0))) {
 				line += "style='color:rgba(255, 128, 64, 1);' ";
-			} else if (parseFloat(thisSet.cpupeak) < (parseFloat(thisSet.memalloc) / parseFloat(2.0))) {
+			} else if (parseFloat(thisSet.cpuPeak) < (parseFloat(thisSet.memAlloc) / parseFloat(2.0))) {
 				line += "style='color:rgba(255, 128, 128, 1);' ";
 			}
 */			line += "title='";
-			line += "Requ: " + thisSet.cpualloc + "\n";
-			line += "Curr: " + thisSet.cpuusage + "\n";
-			line += "Peak: " + thisSet.cpupeak + "\n";
+			line += "Requ: " + thisSet.cpuAlloc + "\n";
+			line += "Curr: " + thisSet.cpuUsage + "\n";
+			line += "Peak: " + thisSet.cpuPeak + "\n";
 			line += "PID CMD CPU MEM\n";
-			for (var pid in thisSet.proclist) {
-				curProc = thisSet.proclist[pid];
+			for (var pid in thisSet.procList) {
+				curProc = thisSet.procList[pid];
 				line += pid + " " + curProc.cmd + " " + curProc.pcpu + " " + humanize(curProc.memu) + "B\n";
 			}
 			line += "'>";
 			line += "<table width='100%' class='inner'>";
 			line += "<tr>";
 			line += "<td class='inner'>&nbsp;";
-			line += parseFloat(thisSet.cpupeak.toFixed(2)) + "/";
+			line += parseFloat(thisSet.cpuPeak.toFixed(2)) + "/";
 		} else {
 			line += "&nbsp;";
 		}
 		
-		line     += thisSet.cpualloc + "&nbsp;";
+		line     += thisSet.cpuAlloc + "&nbsp;";
 		
 		if (bRun) {
 			line += "</td>";
@@ -383,29 +320,29 @@ var printJobs = function(dataSet, bRun=true) {
 		line     += "<td>";
 		
 		if (bRun) {
-			var memPeakPerc = Math.round((thisSet.mempeak  / thisSet.memalloc) * 100)
-			var memUsePerc  = Math.round((thisSet.memusage / thisSet.memalloc) * 100)
+			var memPeakPerc = Math.round((thisSet.memPeak  / thisSet.memAlloc) * 100)
+			var memUsePerc  = Math.round((thisSet.memUsage / thisSet.memAlloc) * 100)
 			
 			line += "<div class='peak' style='background-size: " + memPeakPerc + "% 100%'/>";
 			line += "<div class='perc' style='background-size: " + memUsePerc  + "% 100%'/>";
 			line += "<div ";
-			if (parseFloat(thisSet.mempeak) > parseFloat(thisSet.memalloc)) {
+			if (parseFloat(thisSet.memPeak) > parseFloat(thisSet.memAlloc)) {
 				line += "style='color:rgba(255, 96, 96, 1);' ";
 			}
 			line += "title='";
-			line += "Requ " + humanize(thisSet.memalloc,2) + "\n";
-			line += "Curr " + humanize(thisSet.memusage,2) + " (" + memUsePerc + "%)\n"; 
-			line += "Peak " + humanize(thisSet.mempeak,2) + " (" + memPeakPerc + "%)";
+			line += "Requ " + humanize(thisSet.memAlloc,2) + "\n";
+			line += "Curr " + humanize(thisSet.memUsage,2) + " (" + memUsePerc + "%)\n"; 
+			line += "Peak " + humanize(thisSet.memPeak,2) + " (" + memPeakPerc + "%)";
 			line += "'>";
 			line += "<table width='100%' class='inner'>";
 			line += "<tr>";
 			line += "<td class='inner'>&nbsp;";
-			line += humanize(thisSet.mempeak) + "/";
+			line += humanize(thisSet.memPeak) + "/";
 		} else {
 			line += "&nbsp;";
 		}
 		
-		line     += humanize(thisSet.memalloc) + "&nbsp;";
+		line     += humanize(thisSet.memAlloc) + "&nbsp;";
 		
 		if (bRun) {
 			line += "</td>";
@@ -414,8 +351,8 @@ var printJobs = function(dataSet, bRun=true) {
 			line += "</div>";
 		}
 		line     += "</td>";
-		line     += "<td>&nbsp;" + thisSet.hostname + "&nbsp;</td>";
-		line     += "<td>&nbsp;" + thisSet.jobname + "&nbsp;</td>";
+		line     += "<td>&nbsp;" + thisSet.hostList + "&nbsp;</td>";
+		line     += "<td>&nbsp;" + thisSet.jobName.replace(/_/g,' ') + "&nbsp;</td>";
 		line     += "</tr>";
 		
 		output = output + line;
@@ -479,20 +416,20 @@ var updateData = function() {
 	outML += "<tr><th>Cores<th></tr>";
 	for (var host in hostStats) {
 		var curHost = hostStats[host];
-		var curUsed = Math.round((curHost.cpuusage / curHost.cpumax) * 100)
-		var curLock = Math.round((curHost.cpualloc / curHost.cpumax) * 100)
+		var curUsed = Math.round((curHost.cpuUsage / curHost.cpuMax) * 100)
+		var curLock = Math.round((curHost.cpuAlloc / curHost.cpuMax) * 100)
 		
 		outML += "<tr>";
 		outML += "<td title='";
-		outML += "Allocated: " + curHost.cpualloc + " (" + curLock + "%)\n";
-		outML += "Utilized: " + parseFloat(curHost.cpuusage.toFixed(2)) + " (" + curUsed + "%)'>";
+		outML += "Allocated: " + curHost.cpuAlloc + " (" + curLock + "%)\n";
+		outML += "Utilized: " + parseFloat(curHost.cpuUsage.toFixed(2)) + " (" + curUsed + "%)'>";
 		outML += "<div class='peak' style='background-size: "+ curLock + "% 100%'/>";
 		outML += "<div class='perc' style='background-size: "+ curUsed + "% 100%'/>";
 		outML += "<div>";
 		outML += "<table width='100%' class='inner'>";
 		outML += "<tr>";
 		outML += "<td class='inner'>&nbsp;";
-		outML += curHost.cpualloc + "/" + curHost.cpumax;
+		outML += curHost.cpuAlloc + "/" + curHost.cpuMax;
 		outML += "&nbsp;</td>";
 		outML += "</tr>";
 		outML += "</table>";
@@ -505,20 +442,20 @@ var updateData = function() {
 	outML += "<tr><th>Memory<th></tr>";
 	for (var host in hostStats) {
 		var curHost = hostStats[host];
-		var curUsed = Math.round((curHost.memusage / curHost.memmax) * 100)
-		var curLock = Math.round((curHost.memalloc / curHost.memmax) * 100)
+		var curUsed = Math.round((curHost.memUsage / curHost.memMax) * 100)
+		var curLock = Math.round((curHost.memAlloc / curHost.memMax) * 100)
 		
 		outML += "<tr>";
 		outML += "<td title='";
-		outML += "Allocated: " + humanize(curHost.memalloc,2) + " (" + curLock + "%)\n";
-		outML += "Utilized: " + humanize(curHost.memusage,2) + " (" + curUsed + "%)'>";
+		outML += "Allocated: " + humanize(curHost.memAlloc,2) + " (" + curLock + "%)\n";
+		outML += "Utilized: " + humanize(curHost.memUsage,2) + " (" + curUsed + "%)'>";
 		outML += "<div class='peak' style='background-size: "+ curLock + "% 100%'/>";
 		outML += "<div class='perc' style='background-size: "+ curUsed + "% 100%'/>";
 		outML += "<div>";
 		outML += "<table width='100%' class='inner'>";
 		outML += "<tr>";
 		outML += "<td class='inner'>&nbsp;";
-		outML += humanize(curHost.memalloc) + "/" + humanize(curHost.memmax);
+		outML += humanize(curHost.memAlloc) + "/" + humanize(curHost.memMax);
 		outML += "&nbsp;</td>";
 		outML += "<tr>";
 		outML += "</table>";
@@ -536,7 +473,7 @@ var updateData = function() {
 			
 			if (curUser.online == 1) {
 				outML += "<tr>";
-				outML += "<td title='" + userData[user].name + ": " + toDHMS(curUser.cpusec) + " CPU time'>";
+				outML += "<td title='" + userData[user].name + ": " + toDHMS(curUser.cpuSec) + " CPU time'>";
 				outML += "<div class='perc' style='background-size: " + cpuPerc + "% 100%'/>";
 				outML += "<div>";
 				outML += "<table width='100%' class='inner'>";
