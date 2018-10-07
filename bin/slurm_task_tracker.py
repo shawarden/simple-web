@@ -159,6 +159,8 @@ for jobID in stepDict:
 			# Get username
 			user = stepDict[jobID][jobStep][pid]['user']
 			
+#			print(jobID,user)
+			
 			if users == '' 	:	# Set user
 				users = user
 			elif not user in users:	# User doesn't match? Umm... what?

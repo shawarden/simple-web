@@ -22,6 +22,12 @@
 
 # Changelog
 
+## 2018-10-08
+
+### Changed
+
+- LDAP resolve error halting updates with alert to printing error log.
+
 ## 2018-10-05
 
 ### Added

@@ -217,8 +217,7 @@ var getJobSetFromFile = function(fileName) {
 				'procList'  : procSet
 			};
 			
-			var host = newDataSet[line[JOB_ID]].hostName
-			var user = newDataSet[line[JOB_ID]].user
+			var host = newDataSet[line[JOB_ID]].hostName;
 			
 			if (host in hostStats) {	// Pending jobs bump into me!
 				hostStats[host].memAlloc +=   parseInt(newDataSet[line[JOB_ID]].memAlloc);
@@ -227,10 +226,12 @@ var getJobSetFromFile = function(fileName) {
 				hostStats[host].cpuUsage += parseFloat(newDataSet[line[JOB_ID]].cpuUsage);
 			}
 			
+			var user = newDataSet[line[JOB_ID]].user;
+			
 			if (user in userData) {
 				userData[user].running = true;
 			} else {
-				alert(user + " is not in userData{}.")
+				document.getElementById('logData').innerHTML += user + " is not in userData{}. Please check " + host + " ldap resolver.<br>";
 			}
 		}
 	}
@@ -238,7 +239,7 @@ var getJobSetFromFile = function(fileName) {
 }
 
 var printJobs = function(dataSet, bRun=true) {
-	var output = ''
+	var output = '';
 	for (var jobid in dataSet) {
 		var thisSet = dataSet[jobid];
 		var line   = "<tr class=>";
