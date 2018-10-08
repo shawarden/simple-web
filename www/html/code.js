@@ -5,6 +5,10 @@ var userData  = new Object();
 var memAlloc  = new Object();
 var memUsage  = new Object();
 
+var errLog = function(string) {
+	document.getElementById('logData').innerHTML += "<tr><td>" + string + "</td></tr>\n";
+}
+
 var toSeconds = function(timeString) {
 	var dhms  = timeString.split(/-|:/);
 	var multi = [SEC_PERSEC,SEC_PERMIN,SEC_PERHOUR,SEC_PERDAY]
@@ -29,7 +33,6 @@ var toDHMS = function(seconds) {
 	output    += (mins < 10 ? '0' : '') + mins + ":";
 	output    += (secs < 10 ? '0' : '') + secs;
 	
-//	alert(seconds + " : " + output)
 	return output;
 }
 
@@ -41,7 +44,10 @@ var humanize = function(num, precision=0) {
 		i++
 	}
 	try { var output = parseFloat(fNum.toFixed(precision)) }
-	catch (e) { return num }
+	catch (err) {
+		errLog("Failed to humanize '" + num + "': " + err);
+		return num;
+	};
 	
 	return parseFloat(fNum.toFixed(precision)) + (SIZE_STRING[i] != ' ' ? SIZE_STRING[i] : '')
 }
@@ -60,7 +66,10 @@ var getPage = function(url) {
 	txtFile.open('GET', url, false);
 	
 	try {txtFile.send();}
-	catch(err) {return getPage(url);}	//WHAT ARE YOU DOING???!??!?!?!
+	catch(err) {
+		errLog("Failed to load '" + url + "': " + err);
+		return getPage(url);	//WHAT ARE YOU DOING???!??!?!?!
+	}
 	
 	return txtFile.responseText.split('\n');
 }
@@ -98,10 +107,16 @@ var getSource = function(fileName) {
 
 var updateUsers = function(oldDataSet) {
 	try {var lines = getPage(FILE_USER);}
-	catch (err) {return oldDataSet;}
+	catch (err) {
+		errLog("Failed to load '" + FILE_USER + "': " + err);
+		return oldDataSet;
+	}
 	
 	try {var len = lines.length;}
-	catch (e) {return oldDataSet;}
+	catch (err) {
+		errLog("Failed to parse '" + FILE_USER + "': " + err);
+		return oldDataSet;
+	}
 	
 	var newDataSet = new Object();
 	
@@ -122,10 +137,16 @@ var updateUsers = function(oldDataSet) {
 
 var updateCluster = function(oldDataSet) {
 	try {var lines = getSource(FILE_STAT);}
-	catch (err) {return;}
+	catch (err) {
+		errLog("Failed to load '" + FILE_STAT + "': " + err);
+		return;
+	}
 	
 	try {var len = lines.length;}
-	catch (err) {return;}
+	catch (err) {
+		errLog("Failed to parse '" + FILE_STAT + "': " + err);
+		return;
+	}
 	
 	for (var i = 0; i < len; i++) {
 		var line  = lines[i].split('=');
@@ -171,10 +192,16 @@ var getJobSetFromFile = function(fileName) {
 	var newDataSet = new Object();
 	
 	try {var lines = getSource(fileName);}
-	catch (err) {return newDataSet;}
+	catch (err) {
+		errLog("Failed to load '" + fileName + "': " + err);
+		return newDataSet;
+	}
 	
 	try {var len = lines.length;}
-	catch (err) {return null;}
+	catch (err) {
+		errLog("Failed to parse '" + fileName + "': " + err);
+		return null;
+	}
 	
 	if (len > 0) {	// Why do I need this? 
 		for (var i = 0; i < len; i++) {
@@ -362,6 +389,8 @@ var printJobs = function(dataSet, bRun=true) {
 }
 
 var updateData = function() {
+	// is window focused?
+	
 	userData = updateUsers(userData);
 	
 	updateCluster();
@@ -414,23 +443,34 @@ var updateData = function() {
 	}
 	outML += "<tr><th>&nbsp;</th></tr>";
 	
-	outML += "<tr><th>Cores<th></tr>";
+	outML += "<tr><th title='Used/Locked/Free'>Cores<th></tr>";
 	for (var host in hostStats) {
 		var curHost = hostStats[host];
 		var curUsed = Math.round((curHost.cpuUsage / curHost.cpuMax) * 100)
 		var curLock = Math.round((curHost.cpuAlloc / curHost.cpuMax) * 100)
+		var curFree = parseFloat((curHost.cpuIdle  / curHost.cpuMax) * 100).toFixed(1)
 		
 		outML += "<tr>";
 		outML += "<td title='";
-		outML += "Allocated: " + curHost.cpuAlloc + " (" + curLock + "%)\n";
-		outML += "Utilized: " + parseFloat(curHost.cpuUsage.toFixed(2)) + " (" + curUsed + "%)'>";
+		outML += "Utilized: " + parseFloat(curHost.cpuUsage.toFixed(2)) + " (" + curUsed + "%)";
+		outML += "\nAllocated: " + curHost.cpuAlloc + " (" + curLock + "%)";
+		outML += "\nFree: " + curHost.cpuIdle + " (" + curFree + "%)";
+		outML += "'>";
 		outML += "<div class='peak' style='background-size: "+ curLock + "% 100%'/>";
 		outML += "<div class='perc' style='background-size: "+ curUsed + "% 100%'/>";
 		outML += "<div>";
 		outML += "<table width='100%' class='inner'>";
 		outML += "<tr>";
-		outML += "<td class='inner'>&nbsp;";
-		outML += curHost.cpuAlloc + "/" + curHost.cpuMax;
+//		outML += "<td class='inner'>&nbsp;";
+//		outML += parseFloat((curHost.cpuUsage).toFixed(1));
+//		outML += "&nbsp;</td>";
+//		outML += "<td class='inner' style='text-align:center;'>/</td>";
+//		outML += "<td class='inner' style='text-align:center;'>&nbsp;";
+//		outML += curHost.cpuAlloc;
+//		outML += "&nbsp;</td>";
+//		outML += "<td class='inner' style='text-align:center;'>/</td>";
+		outML += "<td class='inner' style='text-align:right;'>&nbsp;";
+		outML += curHost.cpuIdle;
 		outML += "&nbsp;</td>";
 		outML += "</tr>";
 		outML += "</table>";
@@ -443,20 +483,31 @@ var updateData = function() {
 	outML += "<tr><th>Memory<th></tr>";
 	for (var host in hostStats) {
 		var curHost = hostStats[host];
+		var memFree = (curHost.memMax - curHost.memAlloc)
 		var curUsed = Math.round((curHost.memUsage / curHost.memMax) * 100)
 		var curLock = Math.round((curHost.memAlloc / curHost.memMax) * 100)
+		var curFree = parseFloat((memFree          / curHost.memMax) * 100).toFixed(1)
 		
 		outML += "<tr>";
 		outML += "<td title='";
 		outML += "Allocated: " + humanize(curHost.memAlloc,2) + " (" + curLock + "%)\n";
-		outML += "Utilized: " + humanize(curHost.memUsage,2) + " (" + curUsed + "%)'>";
+		outML += "Utilized: " + humanize(curHost.memUsage,2) + " (" + curUsed + "%)\n";
+		outML += "Free: " + humanize(memFree,2) + " (" + curFree + "%)'>";
 		outML += "<div class='peak' style='background-size: "+ curLock + "% 100%'/>";
 		outML += "<div class='perc' style='background-size: "+ curUsed + "% 100%'/>";
 		outML += "<div>";
 		outML += "<table width='100%' class='inner'>";
 		outML += "<tr>";
-		outML += "<td class='inner'>&nbsp;";
-		outML += humanize(curHost.memAlloc) + "/" + humanize(curHost.memMax);
+//		outML += "<td class='inner'>&nbsp;";
+//		outML += humanize(curHost.memUsage);
+//		outML += "&nbsp;</td>";
+//		outML += "<td class='inner' style='text-align:center;'>/</td>";
+//		outML += "<td class='inner' style='text-align:center;'>&nbsp;";
+//		outML += humanize(curHost.memAlloc);
+//		outML += "&nbsp;</td>";
+//		outML += "<td class='inner' style='text-align:center;'>/</td>";
+		outML += "<td class='inner' style='text-align:right;'>&nbsp;";
+		outML += humanize(memFree);
 		outML += "&nbsp;</td>";
 		outML += "<tr>";
 		outML += "</table>";
@@ -499,4 +550,6 @@ var updateData = function() {
 	
 }
 
-window.onload = setInterval(updateData, REFRESH_RATE)
+window.onload  = setInterval(updateData, REFRESH_RATE)
+window.onfocus = (updateRun = 1)
+window.onblur  = (updateRun = 0)

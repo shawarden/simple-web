@@ -14,7 +14,6 @@
 
 - SLURM 17.2+ (squeue, sinfo, sreport)
 - Python 2.7.13+ (os, datetime)
-- numfmt (size conversion)
 
 # Optional
 
@@ -27,6 +26,15 @@
 ### Changed
 
 - LDAP resolve error halting updates with alert to printing error log.
+
+### Removed
+
+- numfmt requirement.
+
+### Added
+
+- Error logging
+- Comments, glorious comments.
 
 ## 2018-10-05
 

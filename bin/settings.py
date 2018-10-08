@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+# Local path to repository.
 pathSource       = "/resource/apps/simple-web"
 
 def filePeak (data):
@@ -17,6 +18,7 @@ clusterLive      = {
 
 memMult          = int(1024)
 
+# per-host job string item positions. 
 jobLine = {
 	'jobid'		: 0,
 	'user'		: 1,

@@ -1,21 +1,34 @@
 #!/usr/bin/env python
 
-import os
+import settings
 
+# Takes a PID and a PPID:PIDs tree.
+# Returns all descendant process pids.
 def psTreeF(ppid, parentDict):
+	# pid is a parent
 	if ppid in parentDict:
+		# Cycle through all children.
 		for pid in parentDict[ppid]:
+			# return concatenated string of pids.
 			return ppid + "," + psTreeF(pid,parentDict)
 	
+	# return childless pid.
 	return ppid
 
+# Takes time string [[DD-[HH:]MM[:SS]
+# Returns number of seconds.
 def toSeconds(time):
-#	print(time)
+	# Split time string by dividers.
 	timeDHMS   = time.replace('-',':').split(':')
+	
+	# Determine how many blocks.
 	timeBlocks = len(timeDHMS)
+	
+	# Integers are nice.
 	for i in range(timeBlocks):
 		timeDHMS[i] = int(timeDHMS[i])
 		
+	# Build output string.
 	if (timeBlocks == 4):	# DD-HH:MM:SS
 		output = str((timeDHMS[0] * 86400) + (timeDHMS[1] * 3600) + (timeDHMS[2] * 60) + timeDHMS[3])
 	elif (timeBlocks == 3):	# HH:MM:SS
@@ -27,6 +40,21 @@ def toSeconds(time):
 	
 	return output
 
+# Takes a number suffixed with a humanized multiplier.
+# Returns the raw integer value equivalent. 
 def deHumanize(string):
-	return os.popen("numfmt --from=iec --invalid='ignore' " + string).read().split('\n')[0]
-
+	# Strip last char for number.
+	baseNumber = float(string[:-1])
+	
+	# Get last char for multiplier.
+	multiplier = string[-1]
+	
+	# Get exponent value from char position.
+	multChars  = " KMGTPEZ"
+	multiPos   = multChars.find(multiplier)
+	
+	# Do we have a valid location?
+	if multiPos > -1:
+		return int(baseNumber * settings.memMult ** multiPos)
+	
+	return 0

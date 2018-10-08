@@ -37,7 +37,7 @@ const SEC_PERHOUR = 3600;
 const SEC_PERDAY  = 86400;
 
 const SIZE_MULT   = 1024;
-const SIZE_STRING = " KMGTPE";
+const SIZE_STRING = " KMGTPEZ";
 
 const USER_ID    = 0;
 const USER_NAME  = 1;

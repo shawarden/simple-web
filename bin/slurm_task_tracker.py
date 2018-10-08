@@ -16,7 +16,7 @@ for line in os.popen("squeue --nodelist=" + hostName + " -ho '%.100A %100u %100a
 	lineBlocks = line.split(',')
 	
 	# Store jobID : dataset
-	sqDict[lineBlocks[settings.jobLine['jobid']]] = lineBlocks[settings.jobLine['user']] + "," + lineBlocks[settings.jobLine['account']] + "," + lineBlocks[settings.jobLine['jobarray']].replace('_N/A','') + "," + myfuncs.toSeconds(lineBlocks[settings.jobLine['elapsed']]) + "," + myfuncs.toSeconds(lineBlocks[settings.jobLine['timelimit']]) + "," + lineBlocks[settings.jobLine['state']] + "," + lineBlocks[settings.jobLine['partition']] + "," + lineBlocks[settings.jobLine['cpualloc']] + "," + myfuncs.deHumanize(lineBlocks[settings.jobLine['memalloc']]) + "," + lineBlocks[settings.jobLine['hostlist']].replace('(','').replace(')','').replace('JobArrayTaskLimit','ArrayLimit') + "," + lineBlocks[settings.jobLine['jobname']]
+	sqDict[lineBlocks[settings.jobLine['jobid']]] = lineBlocks[settings.jobLine['user']] + "," + lineBlocks[settings.jobLine['account']] + "," + lineBlocks[settings.jobLine['jobarray']].replace('_N/A','') + "," + myfuncs.toSeconds(lineBlocks[settings.jobLine['elapsed']]) + "," + myfuncs.toSeconds(lineBlocks[settings.jobLine['timelimit']]) + "," + lineBlocks[settings.jobLine['state']] + "," + lineBlocks[settings.jobLine['partition']] + "," + lineBlocks[settings.jobLine['cpualloc']] + "," + str(myfuncs.deHumanize(lineBlocks[settings.jobLine['memalloc']])) + "," + lineBlocks[settings.jobLine['hostlist']].replace('(','').replace(')','').replace('JobArrayTaskLimit','ArrayLimit') + "," + lineBlocks[settings.jobLine['jobname']]
 
 # Quit now if no jobs on node.
 if len(sqDict) < 1:
@@ -104,7 +104,7 @@ for pid in psDict:
 			if "<defunct>" in psDict[cpid]['args']: continue
 			
 			# Assemble jobstep dictionary
-			jobTree[cpid] = { 'pcpu' : psDict[cpid]['pcpu'], 'rss' : psDict[cpid]['rss'], 'cmd' : cmd, 'user' : psDict[cpid]['user'] }
+			jobTree[cpid] = { 'pcpu' : float(psDict[cpid]['pcpu']), 'rss' : int(psDict[cpid]['rss']), 'cmd' : cmd, 'user' : psDict[cpid]['user'] }
 		
 		# append to existing jobid
 		if jobID in stepDict:
