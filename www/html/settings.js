@@ -25,6 +25,7 @@ const JOB_MEMUSAGE  = 14;
 const JOB_MEMPEAK   = 15;
 const JOB_HOSTNAME  = 16;
 const JOB_PROCLIST  = 17;
+const JOB_DISKUSE   = 18
 
 const PROC_PID  = 0;
 const PROC_CMD  = 1;

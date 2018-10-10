@@ -36,5 +36,7 @@ jobLine = {
 	'cpupeak'	: 13,
 	'memusage'	: 14,
 	'mempeak'	: 15,
-	'proclist'	: 16
+	'hostname'	: 16,
+	'proclist'	: 17,
+	'diskuse'	: 18
 }

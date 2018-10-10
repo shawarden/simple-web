@@ -112,6 +112,24 @@ for pid in psDict:
 		else:
 			stepDict[jobID] = { jobStep : jobTree }
 
+driveDict = {}
+for jobID in stepDict:
+	users = ''
+	for jobStep in stepDict[jobID]:
+		for pid in stepDict[jobID][jobStep]:
+			user = stepDict[jobID][jobStep][pid]['user']
+			if users == '' 	:	# Set user
+				users = user
+			elif not user in users:	# User doesn't match? Umm... what?
+				print("WARN: " + user + " is not " + users + "!")
+	
+	diskUseDict = {}
+	# Get file system usage
+	diskUseDict['ramdisk'] = int(os.popen("sudo du -bxsL /dev/shm/" + users + "/" + jobID).read().split('\n')[0].split()[0])
+	diskUseDict['tmpdisk'] = int(os.popen("sudo du -bxsL /tmp/"     + users + "/" + jobID).read().split('\n')[0].split()[0])
+	diskUseDict['scratch'] = int(os.popen("sudo du -bxsL /scratch/" + users + "/" + jobID).read().split('\n')[0].split()[0])
+	driveDict[jobID] = diskUseDict
+
 # Retrieve previous peak dataset
 peakDict = {}
 # Does the file exist?
@@ -126,7 +144,7 @@ if os.path.isfile(trackFile):
 		
 		blocks = line.split(',')
 		#print(len(blocks), blocks[0])
-		peakDict[blocks[0]] = { 'pcpu' : float(blocks[13]), 'rss' : int(blocks[15])}
+		peakDict[blocks[settings.jobLine['jobid']]] = { 'pcpu' : float(blocks[settings.jobLine['cpupeak']]), 'rss' : int(blocks[settings.jobLine['mempeak']])}
 	
 	prevPeak.close()
 
@@ -176,14 +194,6 @@ for jobID in stepDict:
 			else: # append existing line
 				cmds = cmds + "|" + newLine
 	
-	# Get shared memory usage.
-	# Add to resident memory value.
-	# Show as line item on PS list.
-	# $SHM_DIR /dev/shm/$USER/$SLURM_JOBID
-#	shm   = int(os.popen("du -bxsL /dev/shm/" + users + "/" + jobID).read().split('\n')[0].split()[0])
-#	rss  += shm
-#	cmds  = "0:RAMDisk:0:" + str(shm) + "|" + cmds
-	
 	# Normalize CPU usage if userland threads exceed 100% 	
 	# Not entirely sure how a process that's locked to cores X~Y can exceed 100% capacity of X~Y
 	# Perhaps it's due to the way 'ps' reports pcpu values?
@@ -199,8 +209,12 @@ for jobID in stepDict:
 	peakCPU = maxCPU if peakCPU > maxCPU else peakCPU
 	pcpu    = maxCPU if pcpu    > maxCPU else pcpu
 	
+	driveUse = str(driveDict[jobID]['ramdisk']) + ":" + str(driveDict[jobID]['tmpdisk']) + ":" + str(driveDict[jobID]['scratch'])
+	
 	# Dump merged jobid line.
-	outLine = jobID + "," + sqDict[jobID] + "," + str(pcpu) + "," + str(peakCPU) + "," + str(rss) + "," + str(peakRSS) + "," + hostName + "," + cmds
+	outLine = jobID + "," + sqDict[jobID] + "," + str(pcpu) + "," + str(peakCPU) + "," + str(rss) + "," + str(peakRSS) + "," + hostName + "," + cmds + "," + driveUse
+	
+#	print(outLine)
 	
 	curPeak.write(outLine + "\n")
 

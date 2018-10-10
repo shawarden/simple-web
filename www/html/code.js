@@ -5,10 +5,13 @@ var userData  = new Object();
 var memAlloc  = new Object();
 var memUsage  = new Object();
 
+// Log output to error dump.
 var errLog = function(string) {
-	document.getElementById('logData').innerHTML += "<tr><td>" + string + "</td></tr>\n";
+	var d = new Date().toUTCString();
+	document.getElementById('logData').innerHTML += "<tr><td style='border:0px;'>" + d + ": " + string + "</td></tr>\n";
 }
 
+// Convert string [D-HH:MM:SS]
 var toSeconds = function(timeString) {
 	var dhms  = timeString.split(/-|:/);
 	var multi = [SEC_PERSEC,SEC_PERMIN,SEC_PERHOUR,SEC_PERDAY]
@@ -21,6 +24,7 @@ var toSeconds = function(timeString) {
 	return secs;
 }
 
+// Convert seconds to D-HH:MM:SS
 var toDHMS = function(seconds) {
 	var days = Math.floor(seconds / SEC_PERDAY);
 	var hrs  = Math.floor((seconds % SEC_PERDAY) / SEC_PERHOUR);
@@ -36,6 +40,7 @@ var toDHMS = function(seconds) {
 	return output;
 }
 
+// Convert number to short human readable abreviation.
 var humanize = function(num, precision=0) {
 	var i    = 0;
 	var fNum = num;
@@ -49,9 +54,10 @@ var humanize = function(num, precision=0) {
 		return num;
 	};
 	
-	return parseFloat(fNum.toFixed(precision)) + (SIZE_STRING[i] != ' ' ? SIZE_STRING[i] : '')
+	return parseFloat(fNum.toFixed(precision)) + (SIZE_STRING[i] != ' ' ? ' ' + SIZE_STRING[i] : '')
 }
 
+// Retrieve page.
 var getPage = function(url) {
 	var txtFile, lines = [];
 	if (window.XMLHttpRequest) {
@@ -241,7 +247,8 @@ var getJobSetFromFile = function(fileName) {
 				'memUsage'  : line[JOB_MEMUSAGE] != null ?   parseInt(line[JOB_MEMUSAGE]) : 0,
 				'memPeak'   : line[JOB_MEMPEAK]  != null ?   parseInt(line[JOB_MEMPEAK]) : 0,
 				'hostName'  : line[JOB_HOSTNAME] != null ? line[JOB_HOSTNAME] : '',
-				'procList'  : procSet
+				'procList'  : procSet,
+				'diskUse'   : line[JOB_DISKUSE] != null ? line[JOB_DISKUSE] : '',
 			};
 			
 			var host = newDataSet[line[JOB_ID]].hostName;
@@ -358,19 +365,19 @@ var printJobs = function(dataSet, bRun=true) {
 				line += "style='color:rgba(255, 96, 96, 1);' ";
 			}
 			line += "title='";
-			line += "Requ " + humanize(thisSet.memAlloc,2) + "\n";
-			line += "Curr " + humanize(thisSet.memUsage,2) + " (" + memUsePerc + "%)\n"; 
-			line += "Peak " + humanize(thisSet.memPeak,2) + " (" + memPeakPerc + "%)";
+			line += "Requ " + humanize(thisSet.memAlloc,2) + "B\n";
+			line += "Curr " + humanize(thisSet.memUsage,2) + "B (" + memUsePerc + "%)\n"; 
+			line += "Peak " + humanize(thisSet.memPeak,2) + "B (" + memPeakPerc + "%)";
 			line += "'>";
 			line += "<table width='100%' class='inner'>";
 			line += "<tr>";
 			line += "<td class='inner'>&nbsp;";
-			line += humanize(thisSet.memPeak) + "/";
+			line += humanize(thisSet.memPeak) + "B/";
 		} else {
 			line += "&nbsp;";
 		}
 		
-		line     += humanize(thisSet.memAlloc) + "&nbsp;";
+		line     += humanize(thisSet.memAlloc) + "B&nbsp;";
 		
 		if (bRun) {
 			line += "</td>";
@@ -378,6 +385,30 @@ var printJobs = function(dataSet, bRun=true) {
 			line += "</table>";
 			line += "</div>";
 		}
+		
+		if (bRun) {
+			var diskUse = thisSet.diskUse.split(":")
+			var ramDisk = parseInt(diskUse[0]);
+			var tmpDisk = parseInt(diskUse[1]);
+			var scrDisk = parseInt(diskUse[2]);
+			var totDisk = (ramDisk + tmpDisk + scrDisk)
+			var ramFree = (thisSet.memAlloc - thisSet.memUsage)
+			line += "<td";
+			if (ramDisk > ramFree) {
+				// SHM exceeds memory allocation!
+				line += " style='color:red'";
+			}
+			line += " title='";
+			line += "$SHM_DIR: " + humanize(ramDisk) + "B\n";
+			line += (ramDisk > ramFree ? "Exceeds remaining allocation: " + humanize(ramFree) +"B\n" : "");
+			line += "$TMP_DIR: " + humanize(tmpDisk) + "B\n";
+			line += "$SCRATCH_DIR: " + humanize(scrDisk) + "B";
+			line += "'>&nbsp;" + humanize(totDisk) + "B&nbsp;</td>"
+		} else {
+			line += "<td>";
+			line += "</td>";
+		}
+		
 		line     += "</td>";
 		line     += "<td>&nbsp;" + thisSet.hostList + "&nbsp;</td>";
 		line     += "<td>&nbsp;" + thisSet.jobName.replace(/_/g,' ') + "&nbsp;</td>";
@@ -395,12 +426,17 @@ var updateData = function() {
 	
 	updateCluster();
 	
-	var jobSet      = new Object();	// jobid, user, account, etc
+	var jobSet = new Object();	// jobid, user, account, etc
 	for (host in hostStats) {
-		jobSet = {...jobSet, ...getJobSetFromFile(FILE_JOB1 + host + FILE_JOB2)};
+		var newJobSet = getJobSetFromFile(FILE_JOB1 + host + FILE_JOB2)
+		// Abort update if file error.
+		if (newJobSet == null) return;
+		jobSet = {...jobSet, ...newJobSet};
 	}
 	
 	var pendSet = getJobSetFromFile(FILE_PEND);
+	// Abort update if file error.
+	if (pendSet == null) return;
 	
 	document.getElementById('jobData').innerHTML = "<tr>\
 <th>User</th>\
@@ -409,6 +445,7 @@ var updateData = function() {
 <th>State</th>\
 <th style='min-width:100px'>Peak CPU</th>\
 <th style='min-width:100px'>Peak RAM</th>\
+<th>Disk</th>\
 <th>Node</th>\
 <th width='100%'>Job Name</th>\
 </tr>" + printJobs(jobSet) + printJobs(pendSet, false);
@@ -490,9 +527,9 @@ var updateData = function() {
 		
 		outML += "<tr>";
 		outML += "<td title='";
-		outML += "Allocated: " + humanize(curHost.memAlloc,2) + " (" + curLock + "%)\n";
-		outML += "Utilized: " + humanize(curHost.memUsage,2) + " (" + curUsed + "%)\n";
-		outML += "Free: " + humanize(memFree,2) + " (" + curFree + "%)'>";
+		outML += "Allocated: " + humanize(curHost.memAlloc,2) + "B (" + curLock + "%)\n";
+		outML += "Utilized: " + humanize(curHost.memUsage,2) + "B (" + curUsed + "%)\n";
+		outML += "Free: " + humanize(memFree,2) + "B (" + curFree + "%)'>";
 		outML += "<div class='peak' style='background-size: "+ curLock + "% 100%'/>";
 		outML += "<div class='perc' style='background-size: "+ curUsed + "% 100%'/>";
 		outML += "<div>";
@@ -508,7 +545,7 @@ var updateData = function() {
 //		outML += "<td class='inner' style='text-align:center;'>/</td>";
 		outML += "<td class='inner' style='text-align:right;'>&nbsp;";
 		outML += humanize(memFree);
-		outML += "&nbsp;</td>";
+		outML += "B&nbsp;</td>";
 		outML += "<tr>";
 		outML += "</table>";
 		outML += "</div>";
@@ -520,8 +557,11 @@ var updateData = function() {
 	outML += "<tr><th>Users Online<th></tr>";
 	for (var user in userUsage) {
 		if (user.toLowerCase() in userData) {
-			var curUser  = userUsage[user];
-			var cpuPerc  = Math.round(curUser.percent)
+			var ghostUser = userData[user.toLowerCase()].alt;
+			if (ghostUser in userData) continue;
+			
+			var curUser   = userUsage[user];
+			var cpuPerc   = Math.round(curUser.percent)
 			
 			if (curUser.online == 1) {
 				outML += "<tr>";

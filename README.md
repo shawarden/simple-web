@@ -8,8 +8,6 @@
 - bin/slurm_report_usage_from.sh runs 'sreport -nP cluster AccountUtilizationByUser' from a set date and returns overall usage.
 - bin/slurm_report_usagepercent_from.sh runs ''
 
-
-
 # Requirements
 
 - SLURM 17.2+ (squeue, sinfo, sreport)
@@ -20,6 +18,13 @@
 - Root access (Query $SHM_DIR, $TMP_DIR and $SCRATCH_DIR)
 
 # Changelog
+
+## 2018-10-10
+
+### Added
+
+- Query $SHM_DIR, $TMP_DIR and $SCRATCH_DIR disk space reporting.
+- Display column for Disk usage. Doesn't include non-slurm areas.
 
 ## 2018-10-08
 
@@ -72,4 +77,3 @@
 - Combine slurm_report_usage_from and slurm_report_usagepercent_from into single sreport call.
 - Adaptable Layout for larger clusters, multiple QoS and multiple clusters.
 - Mobile friendly layout.
-- Internalize numfmt calls.
