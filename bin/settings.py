@@ -8,35 +8,45 @@ def filePeak (data):
 
 fileCluster      = "/dev/shm/slurm_cluster_stats.txt"
 filePending      = "/dev/shm/slurm_pending_tasks.txt"
+fileUserMap      = "/etc/slurm/userlist.txt"
 
 clusterPartition = "funder"
 clusterLive      = {
 	'year'  : 2017,
-	'month' : 1,
-	'day'   : 1
+	'month' : 01,
+	'day'   : 01
 }
 
-memMult          = int(1024)
+memMult   = int(1024)
+memString = " KMGTPEZ";
 
 # per-host job string item positions. 
 jobLine = {
-	'jobid'		: 0,
+	'jobID'		: 0,
 	'user'		: 1,
 	'account'	: 2,
-	'jobarray'	: 3,
+	'jobArray'	: 3,
 	'elapsed'	: 4,
-	'timelimit'	: 5,
+	'timeLimit'	: 5,
 	'state'		: 6,
 	'partition'	: 7,
-	'cpualloc'	: 8,
-	'memalloc'	: 9,
-	'hostlist'	: 10,
-	'jobname'	: 11,
-	'cpuusage'	: 12,
-	'cpupeak'	: 13,
-	'memusage'	: 14,
-	'mempeak'	: 15,
-	'hostname'	: 16,
-	'proclist'	: 17,
-	'diskuse'	: 18
+	'cpuAlloc'	: 8,
+	'memAlloc'	: 9,
+	'hostList'	: 10,
+	'jobName'	: 11,
+	'cpuUsage'	: 12,
+	'cpuPeak'	: 13,
+	'memUsage'	: 14,
+	'memPeak'	: 15,
+	'hostName'	: 16,
+	'procList'	: 17,
+	'diskUse'	: 18
+}
+
+userLine = {
+	'user'	: 0,
+	'name'	: 1,
+	'email'	: 2,
+	'alt'	: 3,
+	'shares': 4
 }

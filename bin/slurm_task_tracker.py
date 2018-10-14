@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import os,myfuncs,settings 
+import os,myfuncs,settings,random
 
 # Current host's name
 hostName  = os.uname()[1].split('.')[0]
@@ -13,10 +13,21 @@ for line in os.popen("squeue --nodelist=" + hostName + " -ho '%.100A %100u %100a
 	# Is last line blank again?
 	if line == '': continue
 	
-	lineBlocks = line.split(',')
-	
 	# Store jobID : dataset
-	sqDict[lineBlocks[settings.jobLine['jobid']]] = lineBlocks[settings.jobLine['user']] + "," + lineBlocks[settings.jobLine['account']] + "," + lineBlocks[settings.jobLine['jobarray']].replace('_N/A','') + "," + myfuncs.toSeconds(lineBlocks[settings.jobLine['elapsed']]) + "," + myfuncs.toSeconds(lineBlocks[settings.jobLine['timelimit']]) + "," + lineBlocks[settings.jobLine['state']] + "," + lineBlocks[settings.jobLine['partition']] + "," + lineBlocks[settings.jobLine['cpualloc']] + "," + str(myfuncs.deHumanize(lineBlocks[settings.jobLine['memalloc']])) + "," + lineBlocks[settings.jobLine['hostlist']].replace('(','').replace(')','').replace('JobArrayTaskLimit','ArrayLimit') + "," + lineBlocks[settings.jobLine['jobname']]
+	lineBlocks        = line.split(',')
+	curJobID          = lineBlocks[settings.jobLine['jobID']]
+	sqDict[curJobID]  = curJobID
+	sqDict[curJobID] += "," + lineBlocks[settings.jobLine['user']]
+	sqDict[curJobID] += "," + lineBlocks[settings.jobLine['account']]
+	sqDict[curJobID] += "," + lineBlocks[settings.jobLine['jobArray']].replace('_N/A','')
+	sqDict[curJobID] += "," + myfuncs.toSeconds(lineBlocks[settings.jobLine['elapsed']])
+	sqDict[curJobID] += "," + myfuncs.toSeconds(lineBlocks[settings.jobLine['timeLimit']])
+	sqDict[curJobID] += "," + lineBlocks[settings.jobLine['state']]
+	sqDict[curJobID] += "," + lineBlocks[settings.jobLine['partition']]
+	sqDict[curJobID] += "," + lineBlocks[settings.jobLine['cpuAlloc']]
+	sqDict[curJobID] += "," + str(myfuncs.deHumanize(lineBlocks[settings.jobLine['memAlloc']]))
+	sqDict[curJobID] += "," + lineBlocks[settings.jobLine['hostList']].replace('(','').replace(')','').replace('JobArrayTaskLimit','ArrayLimit')
+	sqDict[curJobID] += "," + lineBlocks[settings.jobLine['jobName']]
 
 # Quit now if no jobs on node.
 if len(sqDict) < 1:
@@ -25,7 +36,7 @@ if len(sqDict) < 1:
 	curPeak.close()
 	quit()
 
-# Create dictionary of process list.
+# Create dictionary of processes.
 psDict = {}
 for line in os.popen("ps haxo pid,ppid,pcpu,rss,user:20,args").read().split('\n'):
 	# Is last line blanb again?
@@ -75,7 +86,7 @@ for pid in psDict:
 	
 	parentDict[ppid].append(pid)
 
-# Create dictionary of jobids and steps, storing pstree data for cumulative resourse consumption
+# Create dictionary of jobids and steps, storing ps tree data for cumulative resource consumption
 stepDict = {}
 for pid in psDict:
 	# get command line
@@ -104,7 +115,12 @@ for pid in psDict:
 			if "<defunct>" in psDict[cpid]['args']: continue
 			
 			# Assemble jobstep dictionary
-			jobTree[cpid] = { 'pcpu' : float(psDict[cpid]['pcpu']), 'rss' : int(psDict[cpid]['rss']), 'cmd' : cmd, 'user' : psDict[cpid]['user'] }
+			jobTree[cpid] = {
+				'pcpu' : float(psDict[cpid]['pcpu']),
+				'rss'  : int(psDict[cpid]['rss']),
+				'cmd'  : cmd,
+				'user' : psDict[cpid]['user']
+			}
 		
 		# append to existing jobid
 		if jobID in stepDict:
@@ -125,8 +141,8 @@ for jobID in stepDict:
 	
 	diskUseDict = {}
 	# Get file system usage
-	diskUseDict['ramdisk'] = int(os.popen("sudo du -bxsL /dev/shm/" + users + "/" + jobID).read().split('\n')[0].split()[0])
-	diskUseDict['tmpdisk'] = int(os.popen("sudo du -bxsL /tmp/"     + users + "/" + jobID).read().split('\n')[0].split()[0])
+	diskUseDict['ramDisk'] = int(os.popen("sudo du -bxsL /dev/shm/" + users + "/" + jobID).read().split('\n')[0].split()[0])
+	diskUseDict['tmpDisk'] = int(os.popen("sudo du -bxsL /tmp/"     + users + "/" + jobID).read().split('\n')[0].split()[0])
 	diskUseDict['scratch'] = int(os.popen("sudo du -bxsL /scratch/" + users + "/" + jobID).read().split('\n')[0].split()[0])
 	driveDict[jobID] = diskUseDict
 
@@ -144,9 +160,25 @@ if os.path.isfile(trackFile):
 		
 		blocks = line.split(',')
 		#print(len(blocks), blocks[0])
-		peakDict[blocks[settings.jobLine['jobid']]] = { 'pcpu' : float(blocks[settings.jobLine['cpupeak']]), 'rss' : int(blocks[settings.jobLine['mempeak']])}
+		peakDict[blocks[settings.jobLine['jobID']]] = {
+			'pcpu' : float(blocks[settings.jobLine['cpuPeak']]),
+			'rss' : int(blocks[settings.jobLine['memPeak']])
+		}
 	
 	prevPeak.close()
+
+userDict = {}
+for line in os.popen("cat " + settings.fileUserMap).read().split('\n'):
+	# Blank or comment
+	if (line == '') or (line.startswith('#')): continue
+	
+	lineBlocks = line.split(":")
+	userName = lineBlocks[settings.userLine['user']].lower()
+	
+	userDict[userName] = {
+		'name'    : lineBlocks[settings.userLine['name']],
+		'email'   : lineBlocks[settings.userLine['email']]
+	}
 
 # Store peak dataset
 curPeak = open(trackFile, "w")
@@ -197,8 +229,37 @@ for jobID in stepDict:
 	# Normalize CPU usage if userland threads exceed 100% 	
 	# Not entirely sure how a process that's locked to cores X~Y can exceed 100% capacity of X~Y
 	# Perhaps it's due to the way 'ps' reports pcpu values?
-	maxCPU = float(sqDict[jobID].split(',')[settings.jobLine['cpualloc']])
+	sqBlocks = sqDict[jobID].split(',')
+	maxCPU   = float(sqBlocks[settings.jobLine['cpuAlloc']])
+	maxMEM   = int(sqBlocks[settings.jobLine['memAlloc']])
 	
+	totalMEM  = driveDict[jobID]['ramDisk'] + rss
+	rss  += driveDict[jobID]['ramDisk']
+	cmds += "|0:RAM:0.0:" + str(driveDict[jobID]['ramDisk'])
+	
+	if totalMEM > maxMEM:
+		exceedMEM = totalMEM - maxMEM
+		rndChance = random.random()
+		print("WARN: " + str(totalMEM) + " exceeds " + str(maxMEM) + " by " + str(exceedMEM) + "! " + str(rndChance) + " to quit")
+		jobState  = sqBlocks[settings.jobLine['state']]
+		if jobState != "COMPLETING" and rndChance < 0.1:
+			userName  = sqBlocks[settings.jobLine['user']]
+			jobArray  = sqBlocks[settings.jobLine['jobArray']]
+			name      = userDict[userName]['name']
+			email     = userDict[userName]['email']
+			emailFrom = userDict['root']['email']
+			nameFrom  = userDict['root']['name']
+			subject   = "DSMC Job " + jobArray + " canceled due to excessive memory usage"
+			message   = "<p>Dear " + name + "</p>\n"
+			message  += "<p>Your job " + jobArray + " on the DSMC cluster has exceeded its requested memory allocation of " + myfuncs.humanize(maxMEM) + "B by " + myfuncs.humanize(exceedMEM) + "B</p>\n"
+			message  += "<p>Please increase your memory allocation request using '--mem #' or '--mem-per-cpu #'</p>\n"
+			message  += "<p># is in megabytes by default, but you can add a g or G to specify gigabytes</p>\n"
+			message  += "<p>Kind regards,<br>&nbsp;&nbsp;" + nameFrom + "<br>&nbsp;&nbsp;DSMC administrator</p>\n"
+			
+			sendMsg   = os.popen("echo \"From: " + emailFrom + " \nTo: " + email + " \nCC: " + emailFrom + "\nMIME-Version:1.0\nContent-Type: text/html \nSubject: " + subject + "\n\n<html>\n\t<head>\n\t\t<title>" + subject + "</title>\n\t</head>\n\t<body>\n" + message + "\n\t</body>\n</html>\" | /usr/sbin/sendmail -t").read()
+			
+			killit = os.popen("scancel -f " + jobID).read()
+		
 	if jobID in peakDict:
 		peakCPU = pcpu if pcpu > peakDict[jobID]['pcpu'] else peakDict[jobID]['pcpu']
 		peakRSS = rss  if rss  > peakDict[jobID]['rss']  else peakDict[jobID]['rss']
@@ -209,10 +270,10 @@ for jobID in stepDict:
 	peakCPU = maxCPU if peakCPU > maxCPU else peakCPU
 	pcpu    = maxCPU if pcpu    > maxCPU else pcpu
 	
-	driveUse = str(driveDict[jobID]['ramdisk']) + ":" + str(driveDict[jobID]['tmpdisk']) + ":" + str(driveDict[jobID]['scratch'])
+	driveUse = str(driveDict[jobID]['ramDisk']) + ":" + str(driveDict[jobID]['tmpDisk']) + ":" + str(driveDict[jobID]['scratch'])
 	
 	# Dump merged jobid line.
-	outLine = jobID + "," + sqDict[jobID] + "," + str(pcpu) + "," + str(peakCPU) + "," + str(rss) + "," + str(peakRSS) + "," + hostName + "," + cmds + "," + driveUse
+	outLine = sqDict[jobID] + "," + str(pcpu) + "," + str(peakCPU) + "," + str(rss) + "," + str(peakRSS) + "," + hostName + "," + cmds + "," + driveUse
 	
 #	print(outLine)
 	

@@ -19,6 +19,17 @@
 
 # Changelog
 
+## 2018-10-15
+
+### Fixed
+
+- Shared memory usage adds to memory usage.
+
+### Added
+
+- 1:10 chance to cancels any job that exceeds memory allocation.
+- Email alert when job terminates due to exceeding memory allocation.
+
 ## 2018-10-10
 
 ### Added

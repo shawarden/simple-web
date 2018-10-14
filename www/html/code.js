@@ -50,7 +50,7 @@ var humanize = function(num, precision=0) {
 	}
 	try { var output = parseFloat(fNum.toFixed(precision)) }
 	catch (err) {
-		errLog("Failed to humanize '" + num + "': " + err);
+		errLog("Failed to humanize '" + num);
 		return num;
 	};
 	
@@ -73,7 +73,7 @@ var getPage = function(url) {
 	
 	try {txtFile.send();}
 	catch(err) {
-		errLog("Failed to load '" + url + "': " + err);
+		errLog("Failed to load '" + url);
 		return getPage(url);	//WHAT ARE YOU DOING???!??!?!?!
 	}
 	
@@ -114,13 +114,13 @@ var getSource = function(fileName) {
 var updateUsers = function(oldDataSet) {
 	try {var lines = getPage(FILE_USER);}
 	catch (err) {
-		errLog("Failed to load '" + FILE_USER + "': " + err);
+		errLog("Failed to load '" + FILE_USER);
 		return oldDataSet;
 	}
 	
 	try {var len = lines.length;}
 	catch (err) {
-		errLog("Failed to parse '" + FILE_USER + "': " + err);
+		errLog("Failed to parse '" + FILE_USER);
 		return oldDataSet;
 	}
 	
@@ -144,13 +144,13 @@ var updateUsers = function(oldDataSet) {
 var updateCluster = function(oldDataSet) {
 	try {var lines = getSource(FILE_STAT);}
 	catch (err) {
-		errLog("Failed to load '" + FILE_STAT + "': " + err);
+		errLog("Failed to load '" + FILE_STAT);
 		return;
 	}
 	
 	try {var len = lines.length;}
 	catch (err) {
-		errLog("Failed to parse '" + FILE_STAT + "': " + err);
+		errLog("Failed to parse '" + FILE_STAT);
 		return;
 	}
 	
@@ -199,13 +199,13 @@ var getJobSetFromFile = function(fileName) {
 	
 	try {var lines = getSource(fileName);}
 	catch (err) {
-		errLog("Failed to load '" + fileName + "': " + err);
+		errLog("Failed to load '" + fileName);
 		return newDataSet;
 	}
 	
 	try {var len = lines.length;}
 	catch (err) {
-		errLog("Failed to parse '" + fileName + "': " + err);
+		errLog("Failed to parse '" + fileName);
 		return null;
 	}
 	
@@ -310,32 +310,39 @@ var printJobs = function(dataSet, bRun=true) {
 		line     += "<td>";
 		
 		if (bRun) {
-			var cpuPeakPerc = Math.round((thisSet.cpuPeak  / thisSet.cpuAlloc) * 100)
-			var cpuUsePerc  = Math.round((thisSet.cpuUsage / thisSet.cpuAlloc) * 100)
+			var cpuPeakPerc  = Math.round((thisSet.cpuPeak  / thisSet.cpuAlloc) * 100);
+			var cpuUsePerc   = Math.round((thisSet.cpuUsage / thisSet.cpuAlloc) * 100);
+			var lowThreshold = parseFloat(thisSet.cpuAlloc) / parseFloat(8.0);
+			var midThreshold = parseFloat(thisSet.cpuAlloc) / parseFloat(4.0);
+			var norThreshold = parseFloat(thisSet.cpuAlloc) / parseFloat(2.0);
 			
 			line += "<div class='peak' style='background-size: "+ cpuPeakPerc + "% 100%'/>";
 			line += "<div class='perc' style='background-size: "+ cpuUsePerc  + "% 100%'/>";
 			line += "<div ";
-/*			if (parseFloat(thisSet.cpuPeak) < (parseFloat(thisSet.memAlloc) / parseFloat(8.0))) {
-				line += "style='color:rgba(255, 64, 64, 1);' ";
-			} else if (parseFloat(thisSet.cpuPeak) < (parseFloat(thisSet.memAlloc) / parseFloat(4.0))) {
-				line += "style='color:rgba(255, 128, 64, 1);' ";
-			} else if (parseFloat(thisSet.cpuPeak) < (parseFloat(thisSet.memAlloc) / parseFloat(2.0))) {
-				line += "style='color:rgba(255, 128, 128, 1);' ";
-			}
-*/			line += "title='";
+			line += " title='";
 			line += "Requ: " + thisSet.cpuAlloc + "\n";
 			line += "Curr: " + thisSet.cpuUsage + "\n";
 			line += "Peak: " + thisSet.cpuPeak + "\n";
-			line += "PID CMD CPU MEM\n";
+			line += "CMD CPU\n";
 			for (var pid in thisSet.procList) {
 				curProc = thisSet.procList[pid];
-				line += pid + " " + curProc.cmd + " " + curProc.pcpu + " " + humanize(curProc.memu) + "B\n";
+				if (curProc.cmd != "RAM") line += curProc.cmd + " " + curProc.pcpu + "\n";
 			}
 			line += "'>";
 			line += "<table width='100%' class='inner'>";
 			line += "<tr>";
-			line += "<td class='inner'>&nbsp;";
+			line += "<td ";
+			if (thisSet.cpuPeak < lowThreshold) {
+				line += "style='color:rgba(255, 64, 64, 1);' ";
+				//errLog(thisSet.cpuPeak + "<" + lowThreshold);
+			} else if (thisSet.cpuPeak < midThreshold) {
+				line += "style='color:rgba(255, 128, 64, 1);' ";
+				//errLog(thisSet.cpuPeak + "<" + midThreshold);
+			} else if (thisSet.cpuPeak < norThreshold) {
+				line += "style='color:rgba(255, 128, 128, 1);' ";
+				//errLog(thisSet.cpuPeak + "<" + norThreshold);
+			}
+			line += " class='inner'>&nbsp;";
 			line += parseFloat(thisSet.cpuPeak.toFixed(2)) + "/";
 		} else {
 			line += "&nbsp;";
@@ -361,17 +368,27 @@ var printJobs = function(dataSet, bRun=true) {
 			line += "<div class='peak' style='background-size: " + memPeakPerc + "% 100%'/>";
 			line += "<div class='perc' style='background-size: " + memUsePerc  + "% 100%'/>";
 			line += "<div ";
-			if (parseFloat(thisSet.memPeak) > parseFloat(thisSet.memAlloc)) {
-				line += "style='color:rgba(255, 96, 96, 1);' ";
-			}
 			line += "title='";
 			line += "Requ " + humanize(thisSet.memAlloc,2) + "B\n";
 			line += "Curr " + humanize(thisSet.memUsage,2) + "B (" + memUsePerc + "%)\n"; 
-			line += "Peak " + humanize(thisSet.memPeak,2) + "B (" + memPeakPerc + "%)";
+			line += "Peak " + humanize(thisSet.memPeak,2) + "B (" + memPeakPerc + "%)\n";
+			line += "CMD MEM\n";
+			for (var pid in thisSet.procList) {
+				curProc = thisSet.procList[pid];
+				line += curProc.cmd + " " + humanize(curProc.memu) + "B\n";
+			}
 			line += "'>";
 			line += "<table width='100%' class='inner'>";
 			line += "<tr>";
-			line += "<td class='inner'>&nbsp;";
+			line += "<td class='inner' ";
+			if (parseInt(thisSet.memPeak) >= parseInt(thisSet.memAlloc) ) {
+				line += "style='color:rgba(255, 64, 64, 1);' ";
+			} else if (parseInt(thisSet.memPeak) >= (parseFloat(0.95) * parseInt(thisSet.memAlloc)) ) {
+				line += "style='color:rgba(255, 128, 64, 1);' ";
+			} else if (parseInt(thisSet.memPeak) < (parseFloat(0.1) * parseInt(thisSet.memAlloc)) ) {
+				line += "style='color:rgba(255, 128, 128, 1);' ";
+			}
+			line += ">&nbsp;";
 			line += humanize(thisSet.memPeak) + "B/";
 		} else {
 			line += "&nbsp;";
@@ -393,14 +410,15 @@ var printJobs = function(dataSet, bRun=true) {
 			var scrDisk = parseInt(diskUse[2]);
 			var totDisk = (ramDisk + tmpDisk + scrDisk)
 			var ramFree = (thisSet.memAlloc - thisSet.memUsage)
-			line += "<td";
+			var ramDiff = (thisSet.memAlloc - ramFree)
+			line += "<td align='right'";
 			if (ramDisk > ramFree) {
 				// SHM exceeds memory allocation!
 				line += " style='color:red'";
 			}
 			line += " title='";
 			line += "$SHM_DIR: " + humanize(ramDisk) + "B\n";
-			line += (ramDisk > ramFree ? "Exceeds remaining allocation: " + humanize(ramFree) +"B\n" : "");
+			line += (ramDisk > ramFree ? "Exceeds remaining allocation of " + humanize(ramFree) + "B by " + humanize(ramDiff) + "B\n" : "");
 			line += "$TMP_DIR: " + humanize(tmpDisk) + "B\n";
 			line += "$SCRATCH_DIR: " + humanize(scrDisk) + "B";
 			line += "'>&nbsp;" + humanize(totDisk) + "B&nbsp;</td>"

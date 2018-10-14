@@ -58,3 +58,13 @@ def deHumanize(string):
 		return int(baseNumber * settings.memMult ** multiPos)
 	
 	return 0
+
+def humanize (num):
+	i    = 0
+	fNum = num
+	while fNum > settings.memMult:
+		fNum /= float(settings.memMult)
+		i += 1
+	
+	return str("{0:.1f}".format(fNum)) + settings.memString[i]
+
