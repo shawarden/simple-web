@@ -318,8 +318,11 @@ var printJobs = function(dataSet, bRun=true) {
 			
 			line += "<div class='peak' style='background-size: "+ cpuPeakPerc + "% 100%'/>";
 			line += "<div class='perc' style='background-size: "+ cpuUsePerc  + "% 100%'/>";
-			line += "<div ";
-			line += " title='";
+			line += "<div>";
+			line += "<table width='100%' class='inner'>";
+			line += "<tr>";
+			line += "<td class='inner' ";
+			line += "title='";
 			line += "Requ: " + thisSet.cpuAlloc + "\n";
 			line += "Curr: " + thisSet.cpuUsage + "\n";
 			line += "Peak: " + thisSet.cpuPeak + "\n";
@@ -328,21 +331,18 @@ var printJobs = function(dataSet, bRun=true) {
 				curProc = thisSet.procList[pid];
 				if (curProc.cmd != "RAM") line += curProc.cmd + " " + curProc.pcpu + "\n";
 			}
-			line += "'>";
-			line += "<table width='100%' class='inner'>";
-			line += "<tr>";
-			line += "<td ";
+			line += "' ";
 			if (thisSet.cpuPeak < lowThreshold) {
-				line += "style='color:rgba(255, 64, 64, 1);' ";
+				line += "style='color:red;'";
 				//errLog(thisSet.cpuPeak + "<" + lowThreshold);
 			} else if (thisSet.cpuPeak < midThreshold) {
-				line += "style='color:rgba(255, 128, 64, 1);' ";
+				line += "style='color:orange;'";
 				//errLog(thisSet.cpuPeak + "<" + midThreshold);
 			} else if (thisSet.cpuPeak < norThreshold) {
-				line += "style='color:rgba(255, 128, 128, 1);' ";
+				line += "style='color:yellow;'";
 				//errLog(thisSet.cpuPeak + "<" + norThreshold);
 			}
-			line += " class='inner'>&nbsp;";
+			line += ">&nbsp;";
 			line += parseFloat(thisSet.cpuPeak.toFixed(2)) + "/";
 		} else {
 			line += "&nbsp;";
@@ -367,7 +367,10 @@ var printJobs = function(dataSet, bRun=true) {
 			
 			line += "<div class='peak' style='background-size: " + memPeakPerc + "% 100%'/>";
 			line += "<div class='perc' style='background-size: " + memUsePerc  + "% 100%'/>";
-			line += "<div ";
+			line += "<div>";
+			line += "<table width='100%' class='inner'>";
+			line += "<tr>";
+			line += "<td class='inner' ";
 			line += "title='";
 			line += "Requ " + humanize(thisSet.memAlloc,2) + "B\n";
 			line += "Curr " + humanize(thisSet.memUsage,2) + "B (" + memUsePerc + "%)\n"; 
@@ -377,16 +380,13 @@ var printJobs = function(dataSet, bRun=true) {
 				curProc = thisSet.procList[pid];
 				line += curProc.cmd + " " + humanize(curProc.memu) + "B\n";
 			}
-			line += "'>";
-			line += "<table width='100%' class='inner'>";
-			line += "<tr>";
-			line += "<td class='inner' ";
+			line += "' ";
 			if (parseInt(thisSet.memPeak) >= parseInt(thisSet.memAlloc) ) {
-				line += "style='color:rgba(255, 64, 64, 1);' ";
-			} else if (parseInt(thisSet.memPeak) >= (parseFloat(0.95) * parseInt(thisSet.memAlloc)) ) {
-				line += "style='color:rgba(255, 128, 64, 1);' ";
+				line += "style='color:red;'";
+			} else if (parseInt(thisSet.memPeak) >= (parseFloat(0.90) * parseInt(thisSet.memAlloc)) ) {
+				line += "style='color:orange;'";
 			} else if (parseInt(thisSet.memPeak) < (parseFloat(0.1) * parseInt(thisSet.memAlloc)) ) {
-				line += "style='color:rgba(255, 128, 128, 1);' ";
+				line += "style='color:yellow;'";
 			}
 			line += ">&nbsp;";
 			line += humanize(thisSet.memPeak) + "B/";
@@ -412,13 +412,13 @@ var printJobs = function(dataSet, bRun=true) {
 			var ramFree = (thisSet.memAlloc - thisSet.memUsage)
 			var ramDiff = (thisSet.memAlloc - ramFree)
 			line += "<td align='right'";
-			if (ramDisk > ramFree) {
-				// SHM exceeds memory allocation!
-				line += " style='color:red'";
-			}
+//			if (ramDisk > ramFree) {
+//				// SHM exceeds memory allocation!
+//				line += " style='color:red'";
+//			}
 			line += " title='";
 			line += "$SHM_DIR: " + humanize(ramDisk) + "B\n";
-			line += (ramDisk > ramFree ? "Exceeds remaining allocation of " + humanize(ramFree) + "B by " + humanize(ramDiff) + "B\n" : "");
+//			line += (ramDisk > ramFree ? "Exceeds remaining allocation of " + humanize(ramFree) + "B by " + humanize(ramDiff) + "B\n" : "");
 			line += "$TMP_DIR: " + humanize(tmpDisk) + "B\n";
 			line += "$SCRATCH_DIR: " + humanize(scrDisk) + "B";
 			line += "'>&nbsp;" + humanize(totDisk) + "B&nbsp;</td>"
@@ -573,6 +573,7 @@ var updateData = function() {
 	outML += "<tr><th>&nbsp;</th></tr>";
 	
 	outML += "<tr><th>Users Online<th></tr>";
+	
 	for (var user in userUsage) {
 		if (user.toLowerCase() in userData) {
 			var ghostUser = userData[user.toLowerCase()].alt;

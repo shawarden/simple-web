@@ -4,31 +4,34 @@ import os,myfuncs,settings
 
 # Create dictionary of pending jobs
 
-sqqDict = {}
-for line in os.popen("squeue -t PENDING -ho '%.20A %100u %100a %.20F_%100K %.20M %100l %.20T %.20P %100C %100m %R %j' | sed 's/,/@@/g' | awk -v OFS=',' '$1=$1'").read().split('\n'):
+sqDict = {}
+for line in os.popen("squeue -t PENDING -hO jobid:100,username:100,account:100,jobarrayid:100,timeused:100,timelimit:100,state:100,partition:100,tres-alloc:100,reasonlist:100,name:100 | awk -v OFS='|' '$1=$1'").read().split('\n'):
 	if line == '': continue
 	
 	# Store jobID : dataset
-	lineBlocks        = line.split(',')
-	curJobID          = lineBlocks[settings.jobLine['jobID']]
+	lineBlocks        = line.split('|')
+	curJobID          = lineBlocks[settings.queueLine['jobID']]
 	sqDict[curJobID]  = curJobID
-	sqDict[curJobID] += "," + lineBlocks[settings.jobLine['user']]
-	sqDict[curJobID] += "," + lineBlocks[settings.jobLine['account']]
-	sqDict[curJobID] += "," + lineBlocks[settings.jobLine['jobArray']].replace('_N/A','')
-	sqDict[curJobID] += "," + myfuncs.toSeconds(lineBlocks[settings.jobLine['elapsed']])
-	sqDict[curJobID] += "," + myfuncs.toSeconds(lineBlocks[settings.jobLine['timeLimit']])
-	sqDict[curJobID] += "," + lineBlocks[settings.jobLine['state']]
-	sqDict[curJobID] += "," + lineBlocks[settings.jobLine['partition']]
-	sqDict[curJobID] += "," + lineBlocks[settings.jobLine['cpuAlloc']]
-	sqDict[curJobID] += "," + str(myfuncs.deHumanize(lineBlocks[settings.jobLine['memAlloc']]))
-	sqDict[curJobID] += "," + lineBlocks[settings.jobLine['hostList']].replace('(','').replace(')','').replace('JobArrayTaskLimit','ArrayLimit')
-	sqDict[curJobID] += "," + lineBlocks[settings.jobLine['jobName']]
+	sqDict[curJobID] += "," + lineBlocks[settings.queueLine['user']]
+	sqDict[curJobID] += "," + lineBlocks[settings.queueLine['account']]
+	sqDict[curJobID] += "," + lineBlocks[settings.queueLine['jobArray']].replace('_N/A','').replace(',','@@')
+	sqDict[curJobID] += "," + myfuncs.toSeconds(lineBlocks[settings.queueLine['elapsed']])
+	sqDict[curJobID] += "," + myfuncs.toSeconds(lineBlocks[settings.queueLine['timeLimit']])
+	sqDict[curJobID] += "," + lineBlocks[settings.queueLine['state']]
+	sqDict[curJobID] += "," + lineBlocks[settings.queueLine['partition']]
+	
+	tresAlloc = lineBlocks[settings.queueLine['tresAlloc']].split(',')
+	
+	sqDict[curJobID] += "," + tresAlloc[0].split('=')[1]
+	sqDict[curJobID] += "," + str(myfuncs.deHumanize(tresAlloc[1].split('=')[1]))
+	sqDict[curJobID] += "," + lineBlocks[settings.queueLine['hostList']].replace(',','@@').replace('(','').replace(')','')
+	sqDict[curJobID] += "," + lineBlocks[settings.queueLine['jobName']]
 
 pendList = open(settings.filePending, "w")
 pendList.write("START\n")
 
-for jobid in sqqDict:
-	pendList.write(sqqDict[jobid] + "\n")
+for jobid in sqDict:
+	pendList.write(sqDict[jobid] + "\n")
 
 pendList.write("END\n")
 pendList.close()

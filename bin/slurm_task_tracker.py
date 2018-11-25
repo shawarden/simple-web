@@ -9,25 +9,29 @@ trackFile = settings.filePeak(hostName)
 
 # Create dictionary of slurm jobs currently running on this node.
 sqDict = {}
-for line in os.popen("squeue --nodelist=" + hostName + " -ho '%.100A %100u %100a %.20F_%100K %.20M %100l %.20T %.20P %100C %100m %R %j' | sed 's/,/@@/g' | awk -v OFS=',' '$1=$1'").read().split('\n'):
+#for line in os.popen("squeue --nodelist=" + hostName + " -ho '%.100A %100u %100a %.20F_%100K %.20M %100l %.20T %.20P %100C %100m %R %j' | sed 's/,/@@/g' | awk -v OFS=',' '$1=$1'").read().split('\n'):
+for line in os.popen("squeue --nodelist=" + hostName + " -hO jobid:100,username:100,account:100,jobarrayid:100,timeused:100,timelimit:100,state:100,partition:100,tres-alloc:100,reasonlist:100,name:100 | awk -v OFS='|' '$1=$1'").read().split('\n'):
 	# Is last line blank again?
 	if line == '': continue
 	
 	# Store jobID : dataset
-	lineBlocks        = line.split(',')
-	curJobID          = lineBlocks[settings.jobLine['jobID']]
+	lineBlocks        = line.split('|')
+	curJobID          = lineBlocks[settings.queueLine['jobID']]
 	sqDict[curJobID]  = curJobID
-	sqDict[curJobID] += "," + lineBlocks[settings.jobLine['user']]
-	sqDict[curJobID] += "," + lineBlocks[settings.jobLine['account']]
-	sqDict[curJobID] += "," + lineBlocks[settings.jobLine['jobArray']].replace('_N/A','')
-	sqDict[curJobID] += "," + myfuncs.toSeconds(lineBlocks[settings.jobLine['elapsed']])
-	sqDict[curJobID] += "," + myfuncs.toSeconds(lineBlocks[settings.jobLine['timeLimit']])
-	sqDict[curJobID] += "," + lineBlocks[settings.jobLine['state']]
-	sqDict[curJobID] += "," + lineBlocks[settings.jobLine['partition']]
-	sqDict[curJobID] += "," + lineBlocks[settings.jobLine['cpuAlloc']]
-	sqDict[curJobID] += "," + str(myfuncs.deHumanize(lineBlocks[settings.jobLine['memAlloc']]))
-	sqDict[curJobID] += "," + lineBlocks[settings.jobLine['hostList']].replace('(','').replace(')','').replace('JobArrayTaskLimit','ArrayLimit')
-	sqDict[curJobID] += "," + lineBlocks[settings.jobLine['jobName']]
+	sqDict[curJobID] += "," + lineBlocks[settings.queueLine['user']]
+	sqDict[curJobID] += "," + lineBlocks[settings.queueLine['account']]
+	sqDict[curJobID] += "," + lineBlocks[settings.queueLine['jobArray']].replace('_N/A','')
+	sqDict[curJobID] += "," + myfuncs.toSeconds(lineBlocks[settings.queueLine['elapsed']])
+	sqDict[curJobID] += "," + myfuncs.toSeconds(lineBlocks[settings.queueLine['timeLimit']])
+	sqDict[curJobID] += "," + lineBlocks[settings.queueLine['state']]
+	sqDict[curJobID] += "," + lineBlocks[settings.queueLine['partition']]
+	
+	tresAlloc = lineBlocks[settings.queueLine['tresAlloc']].split(',')
+	
+	sqDict[curJobID] += "," + tresAlloc[0].split('=')[1]
+	sqDict[curJobID] += "," + str(myfuncs.deHumanize(tresAlloc[1].split('=')[1]))
+	sqDict[curJobID] += "," + lineBlocks[settings.queueLine['hostList']].replace('(','').replace(')','').replace('JobArrayTaskLimit','ArrayLimit')
+	sqDict[curJobID] += "," + lineBlocks[settings.queueLine['jobName']]
 
 # Quit now if no jobs on node.
 if len(sqDict) < 1:
@@ -102,7 +106,8 @@ for pid in psDict:
 		
 		# extract cumulative resource usage for each child process.
 		jobTree = {}
-		for cpid in myfuncs.psTreeF(pid, parentDict).split(','):
+		for cpid in os.popen("pstree -p " + pid + " | awk -F'[()]' '{for (i=2;i<=NF;i+=2) print $i}'").read().split('\n'):
+#		for cpid in myfuncs.psTreeF(pid, parentDict).split(','):
 			# some pids don't exist? wtf.
 			# last line might be empty?
 			if cpid == '' or not cpid in psDict: continue
@@ -141,8 +146,13 @@ for jobID in stepDict:
 	
 	diskUseDict = {}
 	# Get file system usage
+	#print(users)
 	diskUseDict['ramDisk'] = int(os.popen("sudo du -bxsL /dev/shm/" + users + "/" + jobID).read().split('\n')[0].split()[0])
-	diskUseDict['tmpDisk'] = int(os.popen("sudo du -bxsL /tmp/"     + users + "/" + jobID).read().split('\n')[0].split()[0])
+	#tmpList = os.popen("sudo du -bxsL /tmp/"     + users + "/" + jobID).read().split('\n')
+	#if len(tmpList) > 0 and jobID in tmpList[0]:
+	#	diskUseDict['tmpDisk'] = int(tmpList[0].split()[0])
+	#else:
+	diskUseDict['tmpDisk'] = 0
 	diskUseDict['scratch'] = int(os.popen("sudo du -bxsL /scratch/" + users + "/" + jobID).read().split('\n')[0].split()[0])
 	driveDict[jobID] = diskUseDict
 
@@ -164,6 +174,7 @@ if os.path.isfile(trackFile):
 			'pcpu' : float(blocks[settings.jobLine['cpuPeak']]),
 			'rss' : int(blocks[settings.jobLine['memPeak']])
 		}
+		#print(blocks[settings.jobLine['cpuPeak']],blocks[settings.jobLine['memPeak']])
 	
 	prevPeak.close()
 
@@ -189,6 +200,7 @@ for jobID in stepDict:
 	# reset cumulative values
 	pcpu  = float(0.0)
 	rss   = int(0)
+	cmdBlock = {}
 	cmds  = ''
 	users = ''
 #	print(jobID)
@@ -220,7 +232,17 @@ for jobID in stepDict:
 			if "srun" in bCmd: continue
 			
 			# Assemble resource consumption line
-			newLine = str(pid) + ":" + bCmd + ":" + str(stepDict[jobID][jobStep][pid]['pcpu']) + ":" + str(stepDict[jobID][jobStep][pid]['rss'])
+			if bCmd in cmdBlock:
+				cmdBlock[bCmd]['pcpu'] += float(stepDict[jobID][jobStep][pid]['pcpu'])
+				cmdBlock[bCmd]['rss']  += int(stepDict[jobID][jobStep][pid]['rss'])
+			else:
+				cmdBlock[bCmd]			= {}
+				cmdBlock[bCmd]['pid']	= int(pid)
+				cmdBlock[bCmd]['pcpu']	= float(stepDict[jobID][jobStep][pid]['pcpu'])
+				cmdBlock[bCmd]['rss']	= int(stepDict[jobID][jobStep][pid]['rss'])
+		
+		for bCmd in cmdBlock:
+			newLine = str(cmdBlock[bCmd]['pid']) + ":" + bCmd + ":" + str(cmdBlock[bCmd]['pcpu']) + ":" + str(cmdBlock[bCmd]['rss'])
 			if cmds == '':	# set initial line
 				cmds = newLine
 			else: # append existing line
@@ -243,6 +265,7 @@ for jobID in stepDict:
 		print("WARN: " + str(totalMEM) + " exceeds " + str(maxMEM) + " by " + str(exceedMEM) + "! " + str(rndChance) + " to quit")
 		jobState  = sqBlocks[settings.jobLine['state']]
 		if jobState != "COMPLETING" and rndChance < 0.1:
+			jobID     = sqBlocks[settings.jobLine['jobID']]
 			userName  = sqBlocks[settings.jobLine['user']]
 			jobArray  = sqBlocks[settings.jobLine['jobArray']]
 			name      = userDict[userName]['name']
@@ -254,6 +277,11 @@ for jobID in stepDict:
 			message  += "<p>Your job " + jobArray + " on the DSMC cluster has exceeded its requested memory allocation of " + myfuncs.humanize(maxMEM) + "B by " + myfuncs.humanize(exceedMEM) + "B</p>\n"
 			message  += "<p>Please increase your memory allocation request using '--mem #' or '--mem-per-cpu #'</p>\n"
 			message  += "<p># is in megabytes by default, but you can add a g or G to specify gigabytes</p>\n"
+			message  += "<p>Alternatively, you may want to look into limiting the application's memory consumption via a command line option, if one exists for you software package.</p>\n"
+			message  += "<p>To pass the current job's memory allocation (in MB) you can use either:<br>&nbsp;&nbsp;'\$SLURM_MEM_PER_NODE' if you used --mem # to request a block or memory or<br>&nbsp;&nbsp;'\$((\$SLURM_MEM_PER_CPU * \$SLURM_CPUS_ON_NODE))' if you used --mem-per-cpu # to request a certain amount of memory per CPU requested.</p>\n"
+			message  += "<p>Additionally, using \$SHM_DIR (/dev/shm/" + userName + "/" + jobID + ") will also contribute to overall memory consumption.</p>\n"
+			message  += "<p>You can view any jobs' current CPU and memory usage at <a href='http://dsmc0.otago.ac.nz' target=_blank>dsmc0.otago.ac.nz</a></p>\n"
+			message  += "<p>Please feel free to get in touch with me if you are having any issues with memory allocation.</p>\n"
 			message  += "<p>Kind regards,<br>&nbsp;&nbsp;" + nameFrom + "<br>&nbsp;&nbsp;DSMC administrator</p>\n"
 			
 			sendMsg   = os.popen("echo \"From: " + emailFrom + " \nTo: " + email + " \nCC: " + emailFrom + "\nMIME-Version:1.0\nContent-Type: text/html \nSubject: " + subject + "\n\n<html>\n\t<head>\n\t\t<title>" + subject + "</title>\n\t</head>\n\t<body>\n" + message + "\n\t</body>\n</html>\" | /usr/sbin/sendmail -t").read()

@@ -1,11 +1,12 @@
 // ENUMs
 const REFRESH_RATE = 6000;
 
-const FILE_USER = "userlist.txt";
-const FILE_STAT = "slurm_cluster_stats.txt";
-const FILE_JOB1 = "slurm_task_tracker_";
-const FILE_JOB2 = ".txt";
-const FILE_PEND = "slurm_pending_tasks.txt"
+const FILE_USER  = "userlist.txt";
+const FILE_USER2 = "slurm_userlist.txt";
+const FILE_STAT  = "slurm_cluster_stats.txt";
+const FILE_JOB1  = "slurm_task_tracker_";
+const FILE_JOB2  = ".txt";
+const FILE_PEND  = "slurm_pending_tasks.txt";
 
 const JOB_ID        = 0;
 const JOB_USER      = 1;

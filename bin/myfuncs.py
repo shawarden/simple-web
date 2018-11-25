@@ -68,3 +68,12 @@ def humanize (num):
 	
 	return str("{0:.1f}".format(fNum)) + settings.memString[i]
 
+def haystack (stack, key, stackSep=',', keySep='='):
+	hay  = stack.split(stackSep)
+	size = len(hay)
+	
+	for i in range(size):
+		needle = hay[i].split(keySep)
+		if needle[0] == key: return needle[1]
+	
+	return ''
