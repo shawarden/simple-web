@@ -323,7 +323,7 @@ var printJobs = function(dataSet, bRun=true) {
 			line += "<tr>";
 			line += "<td class='inner' ";
 			line += "title='";
-			line += "Requ: " + thisSet.cpuAlloc + "\n";
+			line += "Req: " + thisSet.cpuAlloc + "\n";
 			line += "Curr: " + thisSet.cpuUsage + "\n";
 			line += "Peak: " + thisSet.cpuPeak + "\n";
 			line += "CMD CPU\n";
@@ -372,7 +372,7 @@ var printJobs = function(dataSet, bRun=true) {
 			line += "<tr>";
 			line += "<td class='inner' ";
 			line += "title='";
-			line += "Requ " + humanize(thisSet.memAlloc,2) + "B\n";
+			line += "Req " + humanize(thisSet.memAlloc,2) + "B\n";
 			line += "Curr " + humanize(thisSet.memUsage,2) + "B (" + memUsePerc + "%)\n"; 
 			line += "Peak " + humanize(thisSet.memPeak,2) + "B (" + memPeakPerc + "%)\n";
 			line += "CMD MEM\n";
@@ -417,9 +417,8 @@ var printJobs = function(dataSet, bRun=true) {
 //				line += " style='color:red'";
 //			}
 			line += " title='";
-			line += "$SHM_DIR: " + humanize(ramDisk) + "B\n";
+			line += "$TMPDIR: " + humanize(ramDisk) + "B\n";
 //			line += (ramDisk > ramFree ? "Exceeds remaining allocation of " + humanize(ramFree) + "B by " + humanize(ramDiff) + "B\n" : "");
-			line += "$TMP_DIR: " + humanize(tmpDisk) + "B\n";
 			line += "$SCRATCH_DIR: " + humanize(scrDisk) + "B";
 			line += "'>&nbsp;" + humanize(totDisk) + "B&nbsp;</td>"
 		} else {
@@ -498,7 +497,7 @@ var updateData = function() {
 	}
 	outML += "<tr><th>&nbsp;</th></tr>";
 	
-	outML += "<tr><th title='Used/Locked/Free'>Cores<th></tr>";
+	outML += "<tr><th title='Used/Locked/Free'>Cores Free<th></tr>";
 	for (var host in hostStats) {
 		var curHost = hostStats[host];
 		var curUsed = Math.round((curHost.cpuUsage / curHost.cpuMax) * 100)
@@ -535,7 +534,7 @@ var updateData = function() {
 	}
 	outML += "<tr><th>&nbsp;</th></tr>";
 	
-	outML += "<tr><th>Memory<th></tr>";
+	outML += "<tr><th>Memory Free<th></tr>";
 	for (var host in hostStats) {
 		var curHost = hostStats[host];
 		var memFree = (curHost.memMax - curHost.memAlloc)
