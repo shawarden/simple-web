@@ -15,9 +15,23 @@
 
 # Optional
 
-- Root access (Query $SHM_DIR, $TMP_DIR and $SCRATCH_DIR)
+- Sufficent access to query $TMPDIR and $SCRATCH_DIR directory sizes.
 
 # Changelog
+
+## 2018-12-10
+
+### Changed
+
+- Minor Formatting
+
+### Removed
+
+- SHM_DIR, TMP_DIR as separate dick usage areas. They are now the same.
+
+### Fixed
+
+- Commas Separated values need to remove commas from data
 
 ## 2018-10-15
 
