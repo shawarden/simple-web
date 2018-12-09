@@ -1,5 +1,7 @@
 # About
 
+![Image](https://raw.githubusercontent.com/shawarden/simple-web/master/Example.png)
+
 - Simple website to monitor small SLURM cluster.
 - Contains head node and work node scripts that query slurm and the system to obtain usage statistics.
 - bin/slurm_task_tracker.py runs on each working node. Collects locally running jobids and system ps output. Outputs to /dev/shm/slurm_task_trackes_$(hostname -s).txt containing "raw JobID,username,account,job array id,elapsed seconds,time limit seconds,partition,cores allocated,ram allocated in bytes,hostname,jobname,current pcpu,peak pcpu,current rss in bytes,peak rss in bytes,resource tree of children pid,pcpu,cmd,ram".
