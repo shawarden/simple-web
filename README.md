@@ -29,7 +29,7 @@
 
 ### Removed
 
-- SHM_DIR, TMP_DIR as separate dick usage areas. They are now the same.
+- SHM_DIR, TMP_DIR as separate disk usage areas. They are now the same.
 
 ### Fixed
 
