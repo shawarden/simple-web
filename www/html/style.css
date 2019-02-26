@@ -38,7 +38,7 @@ td.inner {
 	border:0px;
 }
 td.perc {
-	background-image:linear-gradient(to right, rgba(16, 16, 16, 1) 0%, rgba(128, 128, 16, 1) 100%);
+	background-image:linear-gradient(to right, rgba(16, 16, 16, 1) 0%, rgba(128, 128, 16, 0.666) 100%);
 	background-repeat:no-repeat;
 	background-size:0% 100%;
 	min-width:100px;
@@ -55,7 +55,7 @@ div.peak {
 	background-size:0% 100%;
 }
 div.perc {
-	background-image:linear-gradient(to right, rgba(16, 16, 16, 1) 0%, rgba(128, 128, 16, 1) 100%);
+	background-image:linear-gradient(to right, rgba(16, 16, 16, 1) 0%, rgba(196, 196, 16, 0.5) 100%);
 	background-size:0% 100%;
 }
 div {

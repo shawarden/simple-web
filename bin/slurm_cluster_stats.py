@@ -32,6 +32,9 @@ for line in os.popen("""sinfo -h -p """ + settings.clusterPartition + """ --Node
 	
 	(hostname, memAvail, cpuData) = line.split(',')
 	(cpuAlloc, cpuIdle, cpuOther, cpuTotal) = cpuData.split('/')
+	if settings.clusterOverCommit:
+		cpuTotal = str(4 * int(cpuTotal))
+		cpuIdle  = str(int(cpuTotal) - int(cpuAlloc) - int(cpuOther))
 	
 	# Convert memory allocation from MB do B.
 	hostDict[hostname] = str(int(memAvail) * settings.memMult * settings.memMult) + "," + cpuAlloc + "," + cpuIdle + "," + cpuTotal

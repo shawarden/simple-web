@@ -11,15 +11,19 @@ def filePeak2 (data):
 
 fileCluster  = "/dev/shm/slurm_cluster_stats.txt"
 filePending  = "/dev/shm/slurm_pending_tasks.txt"
+fileHistory  = "/dev/shm/slurm_historical_tasks.txt"
 fileUserMap  = "/etc/slurm/userlist.txt"
 fileUserData = "/dev/shm/slurm_userlist.txt"
 
 clusterPartition = "funder"
+
 clusterLive      = {
 	'year'  : 2017,
 	'month' : 01,
 	'day'   : 01
 }
+
+clusterOverCommit = True
 
 memMult   = int(1024)
 memString = " KMGTPEZ";
@@ -59,7 +63,10 @@ jobLine = {
 	'memPeak'	: 15,
 	'hostName'	: 16,
 	'procList'	: 17,
-	'diskUse'	: 18
+	'diskUse'	: 18,
+	'aveCpu'	: 19,
+	'aveMem'	: 20,
+	'aveDev'	: 21
 }
 
 userLine = {

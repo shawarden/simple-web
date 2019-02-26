@@ -1,6 +1,8 @@
 // ENUMs
 const REFRESH_RATE = 6000;
 
+const CPU_OVERCOMMIT = true;
+
 const FILE_USER  = "userlist.txt";
 const FILE_USER2 = "slurm_userlist.txt";
 const FILE_STAT  = "slurm_cluster_stats.txt";

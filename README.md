@@ -21,6 +21,30 @@
 
 # Changelog
 
+## 2019-02-27
+
+### Added
+
+- CPU OverCommit handling.
+- Rolling history code -- Not displayed yet
+- Process usage error handling.
+
+### Fixed
+
+- Process usage error
+
+### Removed
+
+- Condensed process names
+- Memory-Over kill email.
+
+### Changed
+
+- System username is now User's Firstname, First letter of last name.
+- User usage now broken into CPU years, weeks, days, housr, minutes.
+- All users displayed. Online are marked.
+- Current percentage now partially transparrent to visualize over-usage.
+
 ## 2018-12-10
 
 ### Changed

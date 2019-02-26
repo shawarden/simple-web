@@ -164,7 +164,7 @@ var updateCluster = function(oldDataSet) {
 			case 'HOST':	// Host properties
 				hostStats[data[HOST_NAME]] = {
 					'memMax'   : parseInt(data[HOST_MEMMAX]),
-					'cpuAlloc' : parseInt(data[HOST_CPUALLOC]),
+					'cpuAlloc' : 0,
 					'cpuIdle'  : parseInt(data[HOST_CPUIDLE]),
 					'cpuMax'   : parseInt(data[HOST_CPUMAX]),
 					'memAlloc' : 0,
@@ -254,6 +254,7 @@ var getJobSetFromFile = function(fileName) {
 			var host = newDataSet[line[JOB_ID]].hostName;
 			
 			if (host in hostStats) {	// Pending jobs bump into me!
+				hostStats[host].cpuAlloc +=   parseInt(newDataSet[line[JOB_ID]].cpuAlloc)
 				hostStats[host].memAlloc +=   parseInt(newDataSet[line[JOB_ID]].memAlloc);
 				hostStats[host].memUsage +=   parseInt(newDataSet[line[JOB_ID]].memUsage);
 				hostStats[host].cpuPeak  += parseFloat(newDataSet[line[JOB_ID]].cpuPeak);
@@ -279,8 +280,12 @@ var printJobs = function(dataSet, bRun=true) {
 		var line   = "<tr class=>";
 		
 		line     += "<td title='";
+		
 		line     += (thisSet.user in userData ? userData[thisSet.user].name : "Unknown");
-		line     += "'>&nbsp;" + thisSet.user.replace('student+','') + "&nbsp;</td>";
+		
+		userName = userData[thisSet.user].name.split(" ")
+		
+		line     += "'>&nbsp;" + userName[0] + " " + userName[userName.length-1].charAt(0) + "&nbsp;</td>";
 		
 		line     += "<td title='" + jobid + "'>&nbsp;" + thisSet.array + "&nbsp;</td>";
 		
@@ -326,10 +331,10 @@ var printJobs = function(dataSet, bRun=true) {
 			line += "Req: " + thisSet.cpuAlloc + "\n";
 			line += "Curr: " + thisSet.cpuUsage + "\n";
 			line += "Peak: " + thisSet.cpuPeak + "\n";
-			line += "CMD CPU\n";
+			line += "PID CMD CPU\n";
 			for (var pid in thisSet.procList) {
 				curProc = thisSet.procList[pid];
-				if (curProc.cmd != "RAM") line += curProc.cmd + " " + curProc.pcpu + "\n";
+				if (curProc.cmd != "RAM") line += pid + " " + curProc.cmd + " " + curProc.pcpu + "\n";
 			}
 			line += "' ";
 			if (thisSet.cpuPeak < lowThreshold) {
@@ -375,10 +380,10 @@ var printJobs = function(dataSet, bRun=true) {
 			line += "Req " + humanize(thisSet.memAlloc,2) + "B\n";
 			line += "Curr " + humanize(thisSet.memUsage,2) + "B (" + memUsePerc + "%)\n"; 
 			line += "Peak " + humanize(thisSet.memPeak,2) + "B (" + memPeakPerc + "%)\n";
-			line += "CMD MEM\n";
+			line += "PID CMD MEM\n";
 			for (var pid in thisSet.procList) {
 				curProc = thisSet.procList[pid];
-				line += curProc.cmd + " " + humanize(curProc.memu) + "B\n";
+				line += pid + " " + curProc.cmd + " " + humanize(curProc.memu) + "B\n";
 			}
 			line += "' ";
 			if (parseInt(thisSet.memPeak) >= parseInt(thisSet.memAlloc) ) {
@@ -427,7 +432,7 @@ var printJobs = function(dataSet, bRun=true) {
 		}
 		
 		line     += "</td>";
-		line     += "<td>&nbsp;" + thisSet.hostList + "&nbsp;</td>";
+		line     += "<td>&nbsp;" + thisSet.hostList.replace(",","&nbsp;<br>&nbsp;") + "&nbsp;</td>";
 		line     += "<td>&nbsp;" + thisSet.jobName.replace(/_/g,' ') + "&nbsp;</td>";
 		line     += "</tr>";
 		
@@ -496,19 +501,31 @@ var updateData = function() {
 		
 	}
 	outML += "<tr><th>&nbsp;</th></tr>";
-	
-	outML += "<tr><th title='Used/Locked/Free'>Cores Free<th></tr>";
+
+	if (CPU_OVERCOMMIT) {
+		outML += "<tr><th title='1 CPU = 4 vCores\nUsed/Locked/Free'>vCores Free<th></tr>";
+	} else {
+		outML += "<tr><th title='Used/Locked/Free'>Cores Free<th></tr>";
+	}
 	for (var host in hostStats) {
 		var curHost = hostStats[host];
 		var curUsed = Math.round((curHost.cpuUsage / curHost.cpuMax) * 100)
 		var curLock = Math.round((curHost.cpuAlloc / curHost.cpuMax) * 100)
-		var curFree = parseFloat((curHost.cpuIdle  / curHost.cpuMax) * 100).toFixed(1)
+		var curIdle = curHost.cpuMax - curHost.cpuAlloc
+		var curFree = parseFloat((curIdle  / curHost.cpuMax) * 100).toFixed(1)
+
+//		if (CPU_OVERCOMMIT) {
+//			curUsage = parseFloat(curHost.cpuUsage.toFixed(2))*4
+//			curUsed  = curUsed * 4
+//		} else {
+			curUsage = parseFloat(curHost.cpuUsage.toFixed(2))
+//		}
 		
 		outML += "<tr>";
 		outML += "<td title='";
-		outML += "Utilized: " + parseFloat(curHost.cpuUsage.toFixed(2)) + " (" + curUsed + "%)";
+		outML += "Utilized: " + curUsage + " (" + curUsed + "%)";
 		outML += "\nAllocated: " + curHost.cpuAlloc + " (" + curLock + "%)";
-		outML += "\nFree: " + curHost.cpuIdle + " (" + curFree + "%)";
+		outML += "\nFree: " + curIdle + " (" + curFree + "%)";
 		outML += "'>";
 		outML += "<div class='peak' style='background-size: "+ curLock + "% 100%'/>";
 		outML += "<div class='perc' style='background-size: "+ curUsed + "% 100%'/>";
@@ -524,7 +541,7 @@ var updateData = function() {
 //		outML += "&nbsp;</td>";
 //		outML += "<td class='inner' style='text-align:center;'>/</td>";
 		outML += "<td class='inner' style='text-align:right;'>&nbsp;";
-		outML += curHost.cpuIdle;
+		outML += curIdle;
 		outML += "&nbsp;</td>";
 		outML += "</tr>";
 		outML += "</table>";
@@ -571,35 +588,60 @@ var updateData = function() {
 	}
 	outML += "<tr><th>&nbsp;</th></tr>";
 	
-	outML += "<tr><th>Users Online<th></tr>";
+	outML += "<tr><th>Users<th></tr>";
 	
 	for (var user in userUsage) {
 		if (user.toLowerCase() in userData) {
 			var ghostUser = userData[user.toLowerCase()].alt;
-			if (ghostUser in userData) continue;
+			if (ghostUser in userData && ghostUser.toLowerCase() != user.toLowerCase()) continue;
 			
 			var curUser   = userUsage[user];
-			var cpuPerc   = Math.round(curUser.percent)
+			var cpuPerc   = Math.round(curUser.percent);
 			
-			if (curUser.online == 1) {
-				outML += "<tr>";
-				outML += "<td title='" + userData[user].name + ": " + toDHMS(curUser.cpuSec) + " CPU time'>";
-				outML += "<div class='perc' style='background-size: " + cpuPerc + "% 100%'/>";
-				outML += "<div>";
-				outML += "<table width='100%' class='inner'>";
-				outML += "<tr>";
-				outML += "<td class='inner'>&nbsp;";
-				outML += user.replace('student+','');
-				outML += "&nbsp;</td>";
-				outML += "<td class='inner' style='text-align:right'>&nbsp;";
-				outML += cpuPerc;
-				outML += "%&nbsp;</td>";
-				outML += "<tr>";
-				outML += "</table>";
-				outML += "</div>";
-				outML += "</td>";
-				outML += "</tr>";
+			cTime  = toDHMS(curUser.cpuSec);
+			cDays  = cTime.split("-");
+			if (cDays.length > 1) {  
+				cYears = Math.floor(cDays[0] / 365.25);
+				cWeeks = Math.floor((cDays[0] % 365.25) / 7);
+				cVDays = Math.floor((cDays[0] % 365.25) % 7);
 			}
+			
+			cClock = cDays[cDays.length-1].split(":");
+			cString = ""
+
+			// Built usage time string.
+			if      (cYears    > 0) cString += cYears + "y "    + cWeeks + "w " + cVDays + "d " + cClock[0] + "h " + cClock[1] + "m";
+			else if (cWeeks    > 0) cString += cWeeks + "w "    + cVDays + "d " + cClock[0] + "h " + cClock[1] + "m";
+			else if (cDays     > 0) cString += cVDays + "d "    + cClock[0] + "h " + cClock[1] + "m";
+			else if (cClock[0] > 0) cString += cClock[0] + "h " + cClock[1] + "m";
+			else cString += cClock[1] + "m";
+			
+			outML += "<tr>";
+			outML += "<td title='" + userData[user].name + "\n";
+			if (curUser.online == 1) {
+				outML += "Online\n";
+			}
+			outML += "CPU Time: " + cString + "'>";
+			outML += "<div class='perc' style='background-size: " + cpuPerc + "% 100%'/>";
+			outML += "<div>";
+			outML += "<table width='100%' class='inner'>";
+			outML += "<tr>";
+			outML += "<td class='inner'>&nbsp;";
+			if (curUser.online == 1) outML += "[";
+			userName = userData[user].name.split(" ")
+			outML += userName[0] + " " + userName[userName.length-1].charAt(0)
+//			outML += user.replace('student+','');
+			if (curUser.online == 1) outML += "]";
+			outML += "&nbsp;</td>";
+			outML += "<td class='inner' style='text-align:right'>&nbsp;";
+			outML += cpuPerc;
+			outML += "%&nbsp;</td>";
+			outML += "<tr>";
+			outML += "</table>";
+			outML += "</div>";
+			outML += "</td>";
+			outML += "</tr>";
+			/*}*/
 		}
 	}
 	outML += "<tr><th>&nbsp;</th></tr>";
