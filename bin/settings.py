@@ -19,11 +19,11 @@ clusterPartition = "funder"
 
 clusterLive      = {
 	'year'  : 2017,
-	'month' : 01,
-	'day'   : 01
+	'month' : 1,
+	'day'   : 1
 }
 
-clusterOverCommit = True
+clusterOverCommit = False
 
 memMult   = int(1024)
 memString = " KMGTPEZ";

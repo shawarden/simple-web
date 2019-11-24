@@ -32,10 +32,14 @@ for line in os.popen("""sinfo -h -p """ + settings.clusterPartition + """ --Node
 	
 	(hostname, memAvail, cpuData) = line.split(',')
 	(cpuAlloc, cpuIdle, cpuOther, cpuTotal) = cpuData.split('/')
+	cpuTotal = str(int(cpuTotal) - int(cpuOther))
+	
 	if settings.clusterOverCommit:
 		cpuTotal = str(4 * int(cpuTotal))
-		cpuIdle  = str(int(cpuTotal) - int(cpuAlloc) - int(cpuOther))
+		cpuIdle  = str(int(cpuTotal) - int(cpuAlloc))
+
 	
+
 	# Convert memory allocation from MB do B.
 	hostDict[hostname] = str(int(memAvail) * settings.memMult * settings.memMult) + "," + cpuAlloc + "," + cpuIdle + "," + cpuTotal
 
@@ -46,8 +50,8 @@ for line in os.popen(settings.pathSource + "/bin/slurm_report_usagepercent_from.
 	# last line is empty...
 	if line == '': continue
 	
-	(user, cpusec, perc, active) = line.split()
-	userList.append(user + "," + cpusec + "," + perc + "," + active)
+	(user, cpusec, perc, active, home, homeperc, scratch, scratchperc) = line.split(",")
+	userList.append(user + "," + cpusec + "," + perc + "," + active + "," + home + "," + homeperc + "," + scratch + "," + scratchperc)
 
 #####
 # Dumping data is pretty quick.

@@ -16,21 +16,21 @@ $1!="" {
 END {
 	for (userID in cpuMins) {
 		if ( cpuMins[userID] > 0 ) {
-			printf "%s %d %.10f\n", userID, cpuMins[userID]*60, (cpuMins[userID]/sum)*100
+			printf "%s,%d,%.10f\n", userID, cpuMins[userID]*60, (cpuMins[userID]/sum)*100
 		}
 	}
-	printf "CLUSTERTOTAL %d 100.0\n", (sum*60)
+	printf "CLUSTERTOTAL,%d,100.0\n", (sum*60)
 }
 ' | \
-	sort -rhk2))
+	sort -t, -rhk2))
 
 activeUsers=($(/usr/bin/who | awk '{print tolower($1)}' | sort | uniq))
 
 for line in ${dataBlock[@]}
 do
 	active=0
-	user=$(echo $line | awk '{print $1}')
-	perc=$(echo $line | awk '{print $2}')
+	user=$(echo $line | awk -F',' '{print $1}')
+	perc=$(echo $line | awk -F',' '{print $2}')
 	for aUser in ${activeUsers[@]}
 	do
 		
@@ -40,8 +40,7 @@ do
 			break
 		fi
 	done
-	echo $line $active
-
+	echo ${line},${active},$(cat /var/www/html/home_usage.txt | grep -i $user &>/dev/null && cat /var/www/html/home_usage.txt | grep -i $user | awk '{print $2","$3}' || echo -n 0,0),$(cat /var/www/html/scratch_usage.txt | grep -i $user &>/dev/null && cat /var/www/html/scratch_usage.txt | grep -i $user | awk '{print $2","$3}' || echo -n 0,0)
 done
 
 IFS=$oldIFS

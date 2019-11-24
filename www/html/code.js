@@ -30,13 +30,13 @@ var toDHMS = function(seconds) {
 	var hrs  = Math.floor((seconds % SEC_PERDAY) / SEC_PERHOUR);
 	var mins = Math.floor((seconds % SEC_PERHOUR) / SEC_PERMIN);
 	var secs = (seconds % SEC_PERMIN);
-	
+
 	var output = '';
 	output    += (days > 0 ? days + "-" : '');
 	output    += (hrs < 10 ? '0' : '')  + hrs  + ":";
 	output    += (mins < 10 ? '0' : '') + mins + ":";
 	output    += (secs < 10 ? '0' : '') + secs;
-	
+
 	return output;
 }
 
@@ -53,7 +53,7 @@ var humanize = function(num, precision=0) {
 		errLog("Failed to humanize '" + num);
 		return num;
 	};
-	
+
 	return parseFloat(fNum.toFixed(precision)) + (SIZE_STRING[i] != ' ' ? ' ' + SIZE_STRING[i] : '')
 }
 
@@ -67,16 +67,16 @@ var getPage = function(url) {
 		// code for IE6, IE5
 		txtFile = new ActiveXObject("Microsoft.XMLHTTP");
 	}
-	
+
 	// Get the requested page
 	txtFile.open('GET', url, false);
-	
+
 	try {txtFile.send();}
 	catch(err) {
 		errLog("Failed to load '" + url);
 		return getPage(url);	//WHAT ARE YOU DOING???!??!?!?!
 	}
-	
+
 	return txtFile.responseText.split('\n');
 }
 
@@ -85,7 +85,7 @@ var getSource = function(fileName) {
 	var lines = getPage(fileName);
 	var len   = lines.length;
 	var data  = new Array();
-	
+
 	// Does the data block start as expected?
 	if (lines[0].startsWith('START')) {
 		for ( var i = 1; i < len; i++) {
@@ -93,7 +93,7 @@ var getSource = function(fileName) {
 				// Successful data block,
 				// We're done here.
 				return data;
-			
+
 			// Ignore lines and comments
 			if (
 				lines[i] == '' ||
@@ -101,12 +101,12 @@ var getSource = function(fileName) {
 				lines[i].startsWith('//')
 			)
 				continue;
-			
+
 			// Append to array.
 			data.push(lines[i]);
 		}
 	}
-	
+
 	// START/END not detected or page is empty.
 	return null;
 }
@@ -117,15 +117,15 @@ var updateUsers = function(oldDataSet) {
 		errLog("Failed to load '" + FILE_USER);
 		return oldDataSet;
 	}
-	
+
 	try {var len = lines.length;}
 	catch (err) {
 		errLog("Failed to parse '" + FILE_USER);
 		return oldDataSet;
 	}
-	
+
 	var newDataSet = new Object();
-	
+
 	for (var i = 0; i < len; i++) {
 		blocks = lines[i].split(":");
 		if (blocks.length == 5) {	// Contains data
@@ -137,7 +137,7 @@ var updateUsers = function(oldDataSet) {
 			};
 		}
 	}
-	
+
 	return newDataSet;
 }
 
@@ -147,18 +147,18 @@ var updateCluster = function(oldDataSet) {
 		errLog("Failed to load '" + FILE_STAT);
 		return;
 	}
-	
+
 	try {var len = lines.length;}
 	catch (err) {
 		errLog("Failed to parse '" + FILE_STAT);
 		return;
 	}
-	
+
 	for (var i = 0; i < len; i++) {
 		var line  = lines[i].split('=');
 		var chunk = line[HOST_BLOCK];
 		var data  = line[HOST_DATA].split(',');
-		
+
 		// What lines are we getting here?
 		switch (chunk) {
 			case 'HOST':	// Host properties
@@ -181,10 +181,14 @@ var updateCluster = function(oldDataSet) {
 				break;
 			case 'USER':	// User usage
 				userUsage[data[USAGE_USER]] = {
-					'cpuSec'  :   parseInt(data[USAGE_CPUSEC]),
-					'percent' : parseFloat(data[USAGE_PERCENT]),
-					'online'  :   parseInt(data[USAGE_ONLINE]),
-					'running' : false
+					'cpuSec'      :   parseInt(data[USAGE_CPUSEC]),
+					'percent'     : parseFloat(data[USAGE_PERCENT]),
+					'online'      :   parseInt(data[USAGE_ONLINE]),
+					'homeuse'     :   parseInt(data[USAGE_HOME]),
+					'homeperc'    : parseFloat(data[USAGE_HOMEPERC]),
+					'scratchuse'  :   parseInt(data[USAGE_SCRATCH]),
+					'scratchperc' : parseFloat(data[USAGE_SCRATCHPERC]),
+					'running'     : false
 				};
 				break;
 			default:
@@ -196,30 +200,30 @@ var updateCluster = function(oldDataSet) {
 // Retrieve job data set from a file.
 var getJobSetFromFile = function(fileName) {
 	var newDataSet = new Object();
-	
+
 	try {var lines = getSource(fileName);}
 	catch (err) {
 		errLog("Failed to load '" + fileName);
 		return newDataSet;
 	}
-	
+
 	try {var len = lines.length;}
 	catch (err) {
 		errLog("Failed to parse '" + fileName);
 		return null;
 	}
-	
-	if (len > 0) {	// Why do I need this? 
+
+	if (len > 0) {	// Why do I need this?
 		for (var i = 0; i < len; i++) {
 			var line = lines[i].split(',');
 			// Fill job data object
-			
+
 			// Build process list
 			var procSet  = new Object();
 			if (line.length > JOB_PROCLIST) {
 				var procList = line[JOB_PROCLIST].split('|');
 				var procCnt  = procList.length;
-				
+
 				for (var j = 0; j < procCnt; j++) {
 					var procData = procList[j].split(':');
 					procSet[procData[PROC_PID]] = {
@@ -229,7 +233,7 @@ var getJobSetFromFile = function(fileName) {
 					};
 				}
 			}
-			
+
 			newDataSet[line[JOB_ID]] = {
 				'user'      : line[JOB_USER].toLowerCase(),
 				'account'   : line[JOB_ACCOUNT],
@@ -250,9 +254,9 @@ var getJobSetFromFile = function(fileName) {
 				'procList'  : procSet,
 				'diskUse'   : line[JOB_DISKUSE] != null ? line[JOB_DISKUSE] : '',
 			};
-			
+
 			var host = newDataSet[line[JOB_ID]].hostName;
-			
+
 			if (host in hostStats) {	// Pending jobs bump into me!
 				hostStats[host].cpuAlloc +=   parseInt(newDataSet[line[JOB_ID]].cpuAlloc)
 				hostStats[host].memAlloc +=   parseInt(newDataSet[line[JOB_ID]].memAlloc);
@@ -260,9 +264,9 @@ var getJobSetFromFile = function(fileName) {
 				hostStats[host].cpuPeak  += parseFloat(newDataSet[line[JOB_ID]].cpuPeak);
 				hostStats[host].cpuUsage += parseFloat(newDataSet[line[JOB_ID]].cpuUsage);
 			}
-			
+
 			var user = newDataSet[line[JOB_ID]].user;
-			
+
 			if (user in userData) {
 				userData[user].running = true;
 			} else {
@@ -278,22 +282,22 @@ var printJobs = function(dataSet, bRun=true) {
 	for (var jobid in dataSet) {
 		var thisSet = dataSet[jobid];
 		var line   = "<tr class=>";
-		
-		line     += "<td title='";
-		
+
+		line     += "<td style='white-space: nowrap;' title='";
+
 		line     += (thisSet.user in userData ? userData[thisSet.user].name : "Unknown");
-		
-		userName = userData[thisSet.user].name.split(" ")
-		
+
+		userName = (thisSet.user in userData ? userData[thisSet.user].name.split(" ") : "Unknown");
+
 		line     += "'>&nbsp;" + userName[0] + " " + userName[userName.length-1].charAt(0) + "&nbsp;</td>";
-		
+
 		line     += "<td title='" + jobid + "'>&nbsp;" + thisSet.array + "&nbsp;</td>";
-		
+
 		line     += "<td style='text-align:right;'>";
-		
+
 		if (bRun) {
 			var runPercent  = Math.round((thisSet.elapsed / thisSet.timeLimit) * 100)
-			
+
 			line += "<div class='perc' style='background-size: " + runPercent + "% 100%'/>";
 			line += "<div title='" + runPercent + "% of " + toDHMS(thisSet.timeLimit) + "'>";
 			line += "<table width='100%' class='inner'>";
@@ -307,20 +311,20 @@ var printJobs = function(dataSet, bRun=true) {
 		} else {
 			line += "&nbsp;" + toDHMS(thisSet.timeLimit) + "&nbsp;";
 		}
-		
+
 		line     += "</td>";
-		
-		line     += "<td>&nbsp;" + thisSet.state + "&nbsp;</td>";
-		
+
+		//line     += "<td>&nbsp;" + thisSet.state + "&nbsp;</td>";
+
 		line     += "<td>";
-		
+
 		if (bRun) {
 			var cpuPeakPerc  = Math.round((thisSet.cpuPeak  / thisSet.cpuAlloc) * 100);
 			var cpuUsePerc   = Math.round((thisSet.cpuUsage / thisSet.cpuAlloc) * 100);
 			var lowThreshold = parseFloat(thisSet.cpuAlloc) / parseFloat(8.0);
 			var midThreshold = parseFloat(thisSet.cpuAlloc) / parseFloat(4.0);
 			var norThreshold = parseFloat(thisSet.cpuAlloc) / parseFloat(2.0);
-			
+
 			line += "<div class='peak' style='background-size: "+ cpuPeakPerc + "% 100%'/>";
 			line += "<div class='perc' style='background-size: "+ cpuUsePerc  + "% 100%'/>";
 			line += "<div>";
@@ -352,33 +356,43 @@ var printJobs = function(dataSet, bRun=true) {
 		} else {
 			line += "&nbsp;";
 		}
-		
+
 		line     += thisSet.cpuAlloc + "&nbsp;";
-		
+
 		if (bRun) {
 			line += "</td>";
 			line += "</tr>";
 			line += "</table>";
 			line += "</div>";
 		}
-		
+
 		line     += "</td>";
-		
+
 		line     += "<td>";
-		
+
 		if (bRun) {
 			var memPeakPerc = Math.round((thisSet.memPeak  / thisSet.memAlloc) * 100)
 			var memUsePerc  = Math.round((thisSet.memUsage / thisSet.memAlloc) * 100)
-			
-			line += "<div class='peak' style='background-size: " + memPeakPerc + "% 100%'/>";
-			line += "<div class='perc' style='background-size: " + memUsePerc  + "% 100%'/>";
+
+			if (thisSet.memPeak > thisSet.memAlloc) {
+				memPeakPercDisplay = Math.round((thisSet.memAlloc / thisSet.memPeak) * 100)
+				memUsePercDisplay  = 100
+				line += "<div class='perc' style='background-size: " + memUsePercDisplay  + "% 100%'/>";
+				line += "<div class='peak' style='background-size: " + memPeakPercDisplay + "% 100%'/>";
+			} else {
+				memPeakPercDisplay = memPeakPerc
+				memUsePercDisplay  = memUsePerc
+				line += "<div class='peak' style='background-size: " + memPeakPercDisplay + "% 100%'/>";
+				line += "<div class='perc' style='background-size: " + memUsePercDisplay  + "% 100%'/>";
+			}
+
 			line += "<div>";
 			line += "<table width='100%' class='inner'>";
 			line += "<tr>";
 			line += "<td class='inner' ";
 			line += "title='";
 			line += "Req " + humanize(thisSet.memAlloc,2) + "B\n";
-			line += "Curr " + humanize(thisSet.memUsage,2) + "B (" + memUsePerc + "%)\n"; 
+			line += "Curr " + humanize(thisSet.memUsage,2) + "B (" + memUsePerc + "%)\n";
 			line += "Peak " + humanize(thisSet.memPeak,2) + "B (" + memPeakPerc + "%)\n";
 			line += "PID CMD MEM\n";
 			for (var pid in thisSet.procList) {
@@ -398,16 +412,16 @@ var printJobs = function(dataSet, bRun=true) {
 		} else {
 			line += "&nbsp;";
 		}
-		
+
 		line     += humanize(thisSet.memAlloc) + "B&nbsp;";
-		
+
 		if (bRun) {
 			line += "</td>";
 			line += "</tr>";
 			line += "</table>";
 			line += "</div>";
 		}
-		
+
 		if (bRun) {
 			var diskUse = thisSet.diskUse.split(":")
 			var ramDisk = parseInt(diskUse[0]);
@@ -430,12 +444,12 @@ var printJobs = function(dataSet, bRun=true) {
 			line += "<td>";
 			line += "</td>";
 		}
-		
+
 		line     += "</td>";
-		line     += "<td>&nbsp;" + thisSet.hostList.replace(",","&nbsp;<br>&nbsp;") + "&nbsp;</td>";
+		line     += "<td>&nbsp;" + thisSet.hostList.replace(",","&nbsp;<br>&nbsp;").replace("JobArrayTaskLimit","Array Throttle").replace("QOSMaxJobsPerUserLimit","MaxJob/User").replace("QOSMaxCpuPerUserLimit","MaxCPU/User") + "&nbsp;</td>";
 		line     += "<td>&nbsp;" + thisSet.jobName.replace(/_/g,' ') + "&nbsp;</td>";
 		line     += "</tr>";
-		
+
 		output = output + line;
 	}
 	return output;
@@ -443,11 +457,11 @@ var printJobs = function(dataSet, bRun=true) {
 
 var updateData = function() {
 	// is window focused?
-	
+
 	userData = updateUsers(userData);
-	
+
 	updateCluster();
-	
+
 	var jobSet = new Object();	// jobid, user, account, etc
 	for (host in hostStats) {
 		var newJobSet = getJobSetFromFile(FILE_JOB1 + host + FILE_JOB2)
@@ -455,32 +469,33 @@ var updateData = function() {
 		if (newJobSet == null) return;
 		jobSet = {...jobSet, ...newJobSet};
 	}
-	
+
 	var pendSet = getJobSetFromFile(FILE_PEND);
 	// Abort update if file error.
 	if (pendSet == null) return;
-	
+
+//<th>State</th>\
+
 	document.getElementById('jobData').innerHTML = "<tr>\
 <th>User</th>\
 <th>Job ID</th>\
 <th style='min-width:100px'>Runtime</th>\
-<th>State</th>\
 <th style='min-width:100px'>Peak CPU</th>\
 <th style='min-width:100px'>Peak RAM</th>\
 <th>Disk</th>\
 <th>Node</th>\
 <th width='100%'>Job Name</th>\
 </tr>" + printJobs(jobSet) + printJobs(pendSet, false);
-	
+
 	var outML  = "<tr><th>Utilization<th></tr>";
 	var spans = [ "Lifetime","Yearly","Monthly","Weekly" ];
-	
+
 	for (var i = 0; i < spans.length; i++) {
 		var curSpan = coreYears[spans[i]];
 		var curPerc = Math.round((curSpan.used / curSpan.avail) * 100)
 		var cyAvail = parseFloat(parseFloat(curSpan.avail).toFixed(1))
 		var cyUsed  = parseFloat(parseFloat(curSpan.used).toFixed(1))
-		
+
 		outML += "<tr>";
 		outML += "<td title='" + cyUsed + " of " + cyAvail + " CPU Years'>";
 		outML += "<div class='perc' style='background-size: "+ curPerc + "% 100%'/>";
@@ -498,7 +513,7 @@ var updateData = function() {
 		outML += "</div>";
 		outML += "</td>";
 		outML += "</tr>";
-		
+
 	}
 	outML += "<tr><th>&nbsp;</th></tr>";
 
@@ -520,15 +535,21 @@ var updateData = function() {
 //		} else {
 			curUsage = parseFloat(curHost.cpuUsage.toFixed(2))
 //		}
-		
+
 		outML += "<tr>";
-		outML += "<td title='";
+		outML += "<td onclick='window.open(\"http://" + host + ".otago.ac.nz:19999/shallow.html\",\"" + host + "_netdata\",\"toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=1024,height=768\")' title='";
 		outML += "Utilized: " + curUsage + " (" + curUsed + "%)";
 		outML += "\nAllocated: " + curHost.cpuAlloc + " (" + curLock + "%)";
 		outML += "\nFree: " + curIdle + " (" + curFree + "%)";
+		if (CPU_OVERCOMMIT) {
+			outML += "\nConcurrent Max: " + curHost.cpuMax/4;
+		}
 		outML += "'>";
+		if (CPU_OVERCOMMIT) {
+			outML += "<div class='ocmax' style='background-size: 25% 100%'/>";
+		}
 		outML += "<div class='peak' style='background-size: "+ curLock + "% 100%'/>";
-		outML += "<div class='perc' style='background-size: "+ curUsed + "% 100%'/>";
+ 		outML += "<div class='perc' style='background-size: "+ curUsed + "% 100%'/>";
 		outML += "<div>";
 		outML += "<table width='100%' class='inner'>";
 		outML += "<tr>";
@@ -541,31 +562,59 @@ var updateData = function() {
 //		outML += "&nbsp;</td>";
 //		outML += "<td class='inner' style='text-align:center;'>/</td>";
 		outML += "<td class='inner' style='text-align:right;'>&nbsp;";
-		outML += curIdle;
-		outML += "&nbsp;</td>";
+		if ( curHost.cpuMax == 0 ){
+			outML += "<td class='inner' style='text-align:center;'>&nbsp;DOWN&nbsp;</td>";
+		} else {
+			outML += "<td class='inner' style='text-align:right;'>&nbsp;";
+			outML += curIdle;
+			outML += "&nbsp;</td>";
+		}
 		outML += "</tr>";
 		outML += "</table>";
 		outML += "</div>";
 		outML += "</td>";
 		outML += "</tr>";
+//		outML += "<tr>";
+//		outML += "<td>";
+//        outML += "<div data-netdata='users.cpu'"
+//        outML += "  data-host='" + host + ".otago.ac.nz'"
+//        outML += "	data-chart-library='dygraph'"
+//        outML += "	data-dygraph-theme='sparkline'"
+//        outML += "	data-width='200'"
+//        outML += "	data-height='100'"
+//        outML += "	data-after='-300'"
+//        outML += "	data-dygraph-valuerange='[0, 4000]'/>"
+//		outML += "</td>";
+//		outML += "</tr>";
 	}
 	outML += "<tr><th>&nbsp;</th></tr>";
-	
+
 	outML += "<tr><th>Memory Free<th></tr>";
 	for (var host in hostStats) {
 		var curHost = hostStats[host];
-		var memFree = (curHost.memMax - curHost.memAlloc)
+		var memFree = (curHost.memMax - (curHost.memAlloc > curHost.memUsage ? curHost.memAlloc : curHost.memUsage))
 		var curUsed = Math.round((curHost.memUsage / curHost.memMax) * 100)
 		var curLock = Math.round((curHost.memAlloc / curHost.memMax) * 100)
 		var curFree = parseFloat((memFree          / curHost.memMax) * 100).toFixed(1)
-		
+
 		outML += "<tr>";
-		outML += "<td title='";
-		outML += "Allocated: " + humanize(curHost.memAlloc,2) + "B (" + curLock + "%)\n";
-		outML += "Utilized: " + humanize(curHost.memUsage,2) + "B (" + curUsed + "%)\n";
-		outML += "Free: " + humanize(memFree,2) + "B (" + curFree + "%)'>";
-		outML += "<div class='peak' style='background-size: "+ curLock + "% 100%'/>";
-		outML += "<div class='perc' style='background-size: "+ curUsed + "% 100%'/>";
+		outML += "<td onclick='window.open(\"http://" + host + ".otago.ac.nz:19999/shallow.html\",\"" + host + "_netdata\",\"toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=1024,height=768\")' title='";
+		outML += "Allocated: " + humanize(curHost.memAlloc,2) + "B (" + curLock + "%)";
+		outML += "\nUtilized: " + humanize(curHost.memUsage,2) + "B (" + curUsed + "%)";
+		outML += "\nFree: " + humanize(memFree,2) + "B (" + curFree + "%)";
+		if (curHost.memUsage > curHost.memAlloc) {
+			outML += "\n! ! Over Uilized ! !";
+		}
+		outML += "'>";
+
+		if (curHost.memUsage > curHost.memAlloc) {
+			outML += "<div class='perc' style='background-size: "+ curUsed + "% 100%'/>";
+			outML += "<div class='peak' style='background-size: "+ curLock + "% 100%'/>";
+		} else {
+			outML += "<div class='peak' style='background-size: "+ curLock + "% 100%'/>";
+			outML += "<div class='perc' style='background-size: "+ curUsed + "% 100%'/>";
+		}
+
 		outML += "<div>";
 		outML += "<table width='100%' class='inner'>";
 		outML += "<tr>";
@@ -577,9 +626,17 @@ var updateData = function() {
 //		outML += humanize(curHost.memAlloc);
 //		outML += "&nbsp;</td>";
 //		outML += "<td class='inner' style='text-align:center;'>/</td>";
-		outML += "<td class='inner' style='text-align:right;'>&nbsp;";
-		outML += humanize(memFree);
-		outML += "B&nbsp;</td>";
+		if ( curHost.cpuMax == 0 ){
+			outML += "<td class='inner' style='text-align:center;'>&nbsp;DOWN&nbsp;</td>";
+		} else {
+		outML += "<td class='inner' style='text-align:right;";
+			if (curHost.memAlloc < curHost.memUsage) {
+				outML += "color:red;";
+			}
+			outML += "'>&nbsp;";
+			outML += humanize(memFree);
+			outML += "B&nbsp;</td>";
+		}
 		outML += "<tr>";
 		outML += "</table>";
 		outML += "</div>";
@@ -587,25 +644,27 @@ var updateData = function() {
 		outML += "</tr>";
 	}
 	outML += "<tr><th>&nbsp;</th></tr>";
-	
-	outML += "<tr><th>Users<th></tr>";
-	
+
+	outML += "<tr><th title='Red: /scratch space\nGreen: CPU cycles\nBlue: /home space'>Usage CSH<th></tr>";
+
 	for (var user in userUsage) {
 		if (user.toLowerCase() in userData) {
 			var ghostUser = userData[user.toLowerCase()].alt;
 			if (ghostUser in userData && ghostUser.toLowerCase() != user.toLowerCase()) continue;
-			
-			var curUser   = userUsage[user];
-			var cpuPerc   = Math.round(curUser.percent);
-			
+
+			var curUser     = userUsage[user];
+			var cpuPerc     = Math.round(curUser.percent);
+			var homePerc    = Math.round(curUser.homeperc);
+			var scratchPerc = Math.round(curUser.scratchperc);
+
 			cTime  = toDHMS(curUser.cpuSec);
 			cDays  = cTime.split("-");
-			if (cDays.length > 1) {  
+			if (cDays.length > 1) {
 				cYears = Math.floor(cDays[0] / 365.25);
 				cWeeks = Math.floor((cDays[0] % 365.25) / 7);
 				cVDays = Math.floor((cDays[0] % 365.25) % 7);
 			}
-			
+
 			cClock = cDays[cDays.length-1].split(":");
 			cString = ""
 
@@ -615,14 +674,18 @@ var updateData = function() {
 			else if (cDays     > 0) cString += cVDays + "d "    + cClock[0] + "h " + cClock[1] + "m";
 			else if (cClock[0] > 0) cString += cClock[0] + "h " + cClock[1] + "m";
 			else cString += cClock[1] + "m";
-			
+
 			outML += "<tr>";
 			outML += "<td title='" + userData[user].name + "\n";
 			if (curUser.online == 1) {
 				outML += "Online\n";
 			}
-			outML += "CPU Time: " + cString + "'>";
+			outML += "CPU Time: " + cString + "\n";
+			outML += "/scratch: " + humanize(curUser.scratchuse,1) + "B (" + scratchPerc + "%)\n";
+			outML += "/home: " + humanize(curUser.homeuse,1) + "B (" + homePerc + "%)'>";
+			outML += "<div class='scratch' style='background-size: " + scratchPerc + "% 100%'/>";
 			outML += "<div class='perc' style='background-size: " + cpuPerc + "% 100%'/>";
+			outML += "<div class='home' style='background-size: " + homePerc + "% 100%'/>";
 			outML += "<div>";
 			outML += "<table width='100%' class='inner'>";
 			outML += "<tr>";
@@ -645,9 +708,9 @@ var updateData = function() {
 		}
 	}
 	outML += "<tr><th>&nbsp;</th></tr>";
-	
+
 	document.getElementById('stats').innerHTML = outML
-	
+
 }
 
 window.onload  = setInterval(updateData, REFRESH_RATE)

@@ -50,12 +50,24 @@ td.peak {
 	background-size:0% 100%;
 	min-width:100px;
 }
+div.ocmax {
+	background-image:linear-gradient(to right, rgba(16, 16, 16, 0.5) 0%, rgba(64, 64, 64, 0.5) 100%);
+	background-size:0% 100%;
+}
 div.peak {
-	background-image:linear-gradient(to right, rgba(16, 16, 16, 1) 0%, rgba(128, 16, 16, 1) 100%);
+	background-image:linear-gradient(to right, rgba(16, 16, 16, 0.5) 0%, rgba(196, 16, 16, 0.5) 100%);
 	background-size:0% 100%;
 }
 div.perc {
-	background-image:linear-gradient(to right, rgba(16, 16, 16, 1) 0%, rgba(196, 196, 16, 0.5) 100%);
+	background-image:linear-gradient(to right, rgba(16, 16, 16, 0.5) 0%, rgba(16, 196, 16, 0.5) 100%);
+	background-size:0% 100%;
+}
+div.scratch {
+	background-image:linear-gradient(to right, rgba(16, 16, 16, 0.5) 0%, rgba(196, 16, 16, 0.5) 100%);
+	background-size:0% 100%;
+}
+div.home {
+	background-image:linear-gradient(to right, rgba(16, 16, 16, 0.5) 0%, rgba(16, 16, 196, 0.5) 100%);
 	background-size:0% 100%;
 }
 div {

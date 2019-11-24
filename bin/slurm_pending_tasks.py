@@ -5,7 +5,7 @@ import os,myfuncs,settings
 # Create dictionary of pending jobs
 
 sqDict = {}
-for line in os.popen("squeue -t PENDING -hO jobid:100,username:100,account:100,jobarrayid:100,timeused:100,timelimit:100,state:100,partition:100,tres-alloc:100,reasonlist:100,name:100 | awk -v OFS='|' '$1=$1'").read().split('\n'):
+for line in os.popen("squeue -t PENDING -hO jobid:200,username:200,account:200,jobarrayid:200,timeused:200,timelimit:200,state:200,partition:200,tres-alloc:200,reasonlist:200,name:200 | awk -F '[[:space:]][[:space:]]+' -v OFS='|' '$1=$1'").read().split('\n'):
 	if line == '': continue
 	
 	# Store jobID : dataset
@@ -24,7 +24,7 @@ for line in os.popen("squeue -t PENDING -hO jobid:100,username:100,account:100,j
 	
 	sqDict[curJobID] += "," + tresAlloc[0].split('=')[1]
 	sqDict[curJobID] += "," + str(myfuncs.deHumanize(tresAlloc[1].split('=')[1]))
-	sqDict[curJobID] += "," + lineBlocks[settings.queueLine['hostList']].replace(',','@@').replace('(','').replace(')','')
+	sqDict[curJobID] += "," + lineBlocks[settings.queueLine['hostList']].replace('(','').replace(', ',',').replace(',','@@').replace(')','')
 	sqDict[curJobID] += "," + lineBlocks[settings.queueLine['jobName']]
 
 pendList = open(settings.filePending, "w")

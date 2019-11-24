@@ -11,7 +11,7 @@ trackFile = settings.filePeak(hostName)
 # Create dictionary of slurm jobs currently running on this node.
 sqDict = {}
 #for line in os.popen("squeue --nodelist=" + hostName + " -ho '%.100A %100u %100a %.20F_%100K %.20M %100l %.20T %.20P %100C %100m %R %j' | sed 's/,/@@/g' | awk -v OFS=',' '$1=$1'").read().split('\n'):
-for line in os.popen("squeue --nodelist=" + hostName + " -hO jobid:100,username:100,account:100,jobarrayid:100,timeused:100,timelimit:100,state:100,partition:100,tres-alloc:100,reasonlist:100,name:100 | awk -v OFS='|' '$1=$1'").read().split('\n'):
+for line in os.popen("squeue --nodelist=" + hostName + " -hO jobid:200,username:200,account:200,jobarrayid:200,timeused:200,timelimit:200,state:200,partition:200,tres-alloc:200,reasonlist:200,name:200 | awk -F '[[:space:]][[:space:]]+' -v OFS='|' '$1=$1'").read().split('\n'):
 	# Is last line blank again?
 	if line == '': continue
 
@@ -31,7 +31,7 @@ for line in os.popen("squeue --nodelist=" + hostName + " -hO jobid:100,username:
 
 	sqDict[curJobID] += "," + tresAlloc[0].split('=')[1]
 	sqDict[curJobID] += "," + str(myfuncs.deHumanize(tresAlloc[1].split('=')[1]))
-	sqDict[curJobID] += "," + lineBlocks[settings.queueLine['hostList']].replace('(','').replace(')','').replace('JobArrayTaskLimit','ArrayLimit')
+	sqDict[curJobID] += "," + lineBlocks[settings.queueLine['hostList']].replace('(','').replace(')','')
 	sqDict[curJobID] += "," + lineBlocks[settings.queueLine['jobName']]
 
 #print(sqDict)
@@ -325,9 +325,12 @@ for jobID in stepDict:
 curPeak.write("END\n")
 curPeak.close()
 
-with open(settings.fileHistory) as histData:
-	histBuf = deque(histData, maxlen=100)
-
+if os.path.isfile(settings.fileHistory): 
+	with open(settings.fileHistory) as histData:
+		histBuf = deque(histData, maxlen=100)
+else:
+	histBuf = deque()
+	
 # Store job data for a week?
 for jobID in peakDict:
 	if jobID not in stepDict:

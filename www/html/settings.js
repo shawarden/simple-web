@@ -1,14 +1,16 @@
 // ENUMs
 const REFRESH_RATE = 6000;
 
-const CPU_OVERCOMMIT = true;
+const CPU_OVERCOMMIT = false;
 
-const FILE_USER  = "userlist.txt";
-const FILE_USER2 = "slurm_userlist.txt";
-const FILE_STAT  = "slurm_cluster_stats.txt";
-const FILE_JOB1  = "slurm_task_tracker_";
-const FILE_JOB2  = ".txt";
-const FILE_PEND  = "slurm_pending_tasks.txt";
+const FILE_USER    = "userlist.txt";
+const FILE_USER2   = "slurm_userlist.txt";
+const FILE_STAT    = "slurm_cluster_stats.txt";
+const FILE_JOB1    = "slurm_task_tracker_";
+const FILE_JOB2    = ".txt";
+const FILE_PEND    = "slurm_pending_tasks.txt";
+const FILE_HOME    = "home_usage.txt"
+const FILE_SCRATCH = "scratch_usage.txt"
 
 const JOB_ID        = 0;
 const JOB_USER      = 1;
@@ -62,7 +64,11 @@ const CORE_FRAME = 0;
 const CORE_AVAIL = 1;
 const CORE_USED  = 2;
 
-const USAGE_USER    = 0;
-const USAGE_CPUSEC  = 1;
-const USAGE_PERCENT = 2;
-const USAGE_ONLINE  = 3;
+const USAGE_USER        = 0;
+const USAGE_CPUSEC      = 1;
+const USAGE_PERCENT     = 2;
+const USAGE_ONLINE      = 3;
+const USAGE_HOME        = 4;
+const USAGE_HOMEPERC    = 5;
+const USAGE_SCRATCH     = 6;
+const USAGE_SCRATCHPERC = 7;
