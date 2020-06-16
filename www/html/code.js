@@ -464,10 +464,12 @@ var updateData = function() {
 
 	var jobSet = new Object();	// jobid, user, account, etc
 	for (host in hostStats) {
-		var newJobSet = getJobSetFromFile(FILE_JOB1 + host + FILE_JOB2)
-		// Abort update if file error.
-		if (newJobSet == null) return;
-		jobSet = {...jobSet, ...newJobSet};
+		if (hostStats[host].cpuMax > 0) {
+			var newJobSet = getJobSetFromFile(FILE_JOB1 + host + FILE_JOB2)
+			// Abort update if file error.
+			if (newJobSet == null) return;
+			jobSet = {...jobSet, ...newJobSet};
+		}
 	}
 
 	var pendSet = getJobSetFromFile(FILE_PEND);
@@ -537,7 +539,15 @@ var updateData = function() {
 //		}
 
 		outML += "<tr>";
-		outML += "<td onclick='window.open(\"http://" + host + ".otago.ac.nz:19999/shallow.html\",\"" + host + "_netdata\",\"toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=1024,height=768\")' title='";
+		
+		if ( host == "dsmc4" || host == "dsmc5" || host == "dsmc6" ) {
+			var subHost = host + ".uod";
+		} else {
+			var subHost = host;
+		}
+		
+		outML += "<td onclick='window.open(\"http://" + subHost + ".otago.ac.nz:19999\",\"" + host + "_netdata\",\"toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=1024,height=768\")' title='";
+		
 		outML += "Utilized: " + curUsage + " (" + curUsed + "%)";
 		outML += "\nAllocated: " + curHost.cpuAlloc + " (" + curLock + "%)";
 		outML += "\nFree: " + curIdle + " (" + curFree + "%)";
@@ -566,7 +576,7 @@ var updateData = function() {
 			outML += "<td class='inner' style='text-align:center;'>&nbsp;DOWN&nbsp;</td>";
 		} else {
 			outML += "<td class='inner' style='text-align:right;'>&nbsp;";
-			outML += curIdle;
+			outML += curIdle + "/" + curHost.cpuMax;
 			outML += "&nbsp;</td>";
 		}
 		outML += "</tr>";
@@ -598,7 +608,15 @@ var updateData = function() {
 		var curFree = parseFloat((memFree          / curHost.memMax) * 100).toFixed(1)
 
 		outML += "<tr>";
-		outML += "<td onclick='window.open(\"http://" + host + ".otago.ac.nz:19999/shallow.html\",\"" + host + "_netdata\",\"toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=1024,height=768\")' title='";
+		
+		if ( host == "dsmc4" || host == "dsmc5" || host == "dsmc6" ) {
+			var subHost = host + ".uod";
+		} else {
+			var subHost = host;
+		}
+		
+		outML += "<td onclick='window.open(\"http://" + subHost + ".otago.ac.nz:19999/#menu_system_submenu_ram\",\"" + host + "_netdata\",\"toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=1024,height=768\")' title='";
+		
 		outML += "Allocated: " + humanize(curHost.memAlloc,2) + "B (" + curLock + "%)";
 		outML += "\nUtilized: " + humanize(curHost.memUsage,2) + "B (" + curUsed + "%)";
 		outML += "\nFree: " + humanize(memFree,2) + "B (" + curFree + "%)";

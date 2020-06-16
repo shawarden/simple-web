@@ -21,6 +21,12 @@
 
 # Changelog
 
+## 2020-06-17
+
+### Fixed
+
+- reading empty lines from historical data track
+
 ## 2019-02-27
 
 ### Added

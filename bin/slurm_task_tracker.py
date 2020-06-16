@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 
 import os,myfuncs,settings,random
-from collections import deque 
+from collections import deque
 
 # Current host's name
 hostName  = os.uname()[1].split('.')[0]
 
 trackFile = settings.filePeak(hostName)
+histFile  = settings.fileHist(hostName)
 
 # Create dictionary of slurm jobs currently running on this node.
 sqDict = {}
@@ -90,7 +91,7 @@ for pid in psDict:
 
 	# Append pid to parent pid's list of children
 	if not ppid in parentDict:
-		# Parent doesn't exists: create new list. 
+		# Parent doesn't exists: create new list.
 		parentDict[ppid] = []
 
 	parentDict[ppid].append(pid)
@@ -179,9 +180,10 @@ if os.path.isfile(trackFile):
 	# Cycle through lines
 	for line in prevPeak:
 		# Ignore write-state and empty liner
-		if line.startswith('START') or line.startswith('END') or line == '': continue
+		if line.startswith('START') or line.startswith('END') or line == '' or line == '\n': continue
 
 		blocks = line.split(',')
+#		print(len(blocks),line)
 #		print(len(blocks), blocks[0])
 		peakDict[blocks[settings.jobLine['jobID']]] = {
 			'pcpu' : float(blocks[settings.jobLine['cpuPeak']]),
@@ -325,17 +327,17 @@ for jobID in stepDict:
 curPeak.write("END\n")
 curPeak.close()
 
-if os.path.isfile(settings.fileHistory): 
-	with open(settings.fileHistory) as histData:
+if os.path.isfile(histFile):
+	with open(histFile) as histData:
 		histBuf = deque(histData, maxlen=100)
 else:
 	histBuf = deque()
-	
+
 # Store job data for a week?
 for jobID in peakDict:
 	if jobID not in stepDict:
 		histBuf.append(peakDict[jobID]['line'])
 
-with open(settings.fileHistory, "w") as histData:
+with open(histFile, "w") as histData:
 	histData.writelines(histBuf)
 

@@ -6,8 +6,8 @@ pathSource       = "/resource/apps/simple-web"
 def filePeak (data):
 	return "/dev/shm/slurm_task_tracker_" + data + ".txt"
 
-def filePeak2 (data):
-	return "/dev/shm/slurm_task_tracker2_" + data + ".txt"
+def fileHist (data):
+	return "/dev/shm/slurm_task_historical_" + data + ".txt"
 
 fileCluster  = "/dev/shm/slurm_cluster_stats.txt"
 filePending  = "/dev/shm/slurm_pending_tasks.txt"
@@ -28,7 +28,7 @@ clusterOverCommit = False
 memMult   = int(1024)
 memString = " KMGTPEZ";
 
-# per-host job string item positions. 
+# per-host job string item positions.
 queueLine = {
 	'jobID'		: 0,
 	'user'		: 1,

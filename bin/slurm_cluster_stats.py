@@ -65,7 +65,7 @@ dataStore.write("CORE=Yearly,"   + cyfYear  + "," + cufYear  + "\n")
 dataStore.write("CORE=Monthly,"  + cyfMonth + "," + cufMonth + "\n")
 dataStore.write("CORE=Weekly,"   + cyfWeek  + "," + cufWeek  + "\n")
 
-for host in hostDict:
+for host in sorted(hostDict):
 	dataStore.write("HOST=" + host + "," + hostDict[host] + "\n")
 
 for i in range(len(userList)):
